@@ -12,8 +12,8 @@
 % Comparing the Effectiveness of Deep Learning Models
 % on the Categorisation of Galaxy Morphology
 \title{
-    Comparing the Effectiveness of Deep Learning Models on the Categorisation of Galaxy Morphology
-    \\ CMP3753M Project Proposal
+    Comparing the Effectiveness of Deep Learning Models on the Categorisation of
+    Galaxy Morphology \\ CMP3753M Project Proposal
 }
 
 \author{Luke Roberts}
@@ -71,48 +71,48 @@ easier. Therefore, this rapid development in deep learning will allow
 astrophysicists to further their research into the early universe.
 
 Due to advances in observational technology such as the Hubble Space Telescope
-(HST) and more recently the James Webb Space Telescope (JWST) [], we can observe
+(HST) and more recently the James Webb Space Telescope (JWST) \cite{JWST}, we can observe
 galaxies billions of lightyears from earth. The time taken for the light of
 distant galaxies to reach us means that our night sky is a window into the
 past, which allows astrophysicists to understand the evolution of our universe
-in more depth []. Photographs such as the Hubble Ultra-Deep field show us an
-ancient universe full of developing galaxies [], and the amount of observed
+in more depth. Photographs such as the Hubble Ultra-Deep field show us an
+ancient universe full of developing galaxies \cite{HUDF}, and the amount of observed
 galaxies in astronomy databases is only increasing.
 
 By identifying how the structure of galaxies, or galaxy morphology, changes over
- time, we have a clearer picture of the changes of galactic structure over the
- last several billion years. However, it is extremely time-consuming for
- scientists to categorise galaxies in their research. A study in 2016 []
- calculated that there are ~2.0×10¹² galaxies in the observable universe. While
- it would be unfeasible to categorise them all, it would be much more efficient
- to automate the process. One powerful method for automation of images is to
- train and deploy a deep learning model.
+time, we have a clearer picture of the changes of galactic structure over the
+last several billion years. However, it is extremely time-consuming for
+scientists to categorise galaxies in their research. A study in 2016 \cite{EGND}
+calculated that there are ~2.0×10¹² galaxies in the observable universe. While
+it would be unfeasible to categorise them all, it would be much more efficient
+to automate the process. One powerful method for automation of images is to
+train and deploy a deep learning model.
 
 Deep Learning has recently revolutionised both scientific research and modern
-life in a profound way []. From the categorisation of X-ray images in the
+life in a profound way. From the categorisation of X-ray images in the
 medical field; machine translation of natural language such as Google Translate
 and large large language models such as ChatGPT, deep learning has become the
-best way to categorise, analyse and generate unstructured data []. To perform
+best way to categorise, analyse and generate unstructured data \cite{DLCTW}. To perform
 many of these tasks, machine learning engineers create deep learning models
 which utilise a dataset that learns patterns about that data.
 
 Image classification is a form of deep learning that uses images as input data
-and is used for a wide variety of applications in scientific research []. Like
+and is used for a wide variety of applications in scientific research. Like
 all forms of deep learning, image processing models are trained so that they
-more accurately categorise new input data []. At the start of training, the
+more accurately categorise new input data. At the start of training, the
 model performs poorly when tested. However, through analysing how the output
 fails, the model can tweak its own parameters in order to achieve greater
-accuracy []. The choice of which machine learning model or architecture to use
+accuracy. The choice of which machine learning model or architecture to use
 and the specific hyperparameters are important for maximising the efficiency of
-the model []. This can be due to the content and quality of the training data
-being used.
+the model. This can be due to the content and quality of the training data
+being used as shown in (Samuel Dodge and Lina Karam, 2016) \cite{UIQDNN}.
 
-Recent studies such as ‘Galaxy classification: deep learning on the OTELO and
-COSMOS databases’ [] concluded that using a DNN “outperforms” other adopted
-models for galaxy classification. However, to extend this research I will
-evaluate which deep learning neural network is most effective at classifying
-the morphology of distant galaxies by implementing deep learning architectures
-and evaluating their computational efficiency and performance in categorisation.
+Recent studies such as (José A. de Diego et. al) \cite{GCDL} concluded that
+using a DNN “outperforms” other adopted models for galaxy classification.
+However, to extend this research I will evaluate which deep learning neural
+network is most effective at classifying the morphology of distant galaxies by
+implementing deep learning architectures and evaluating their computational
+efficiency and performance in categorisation.
 
 \section{Aims and Objectives}
 
@@ -180,12 +180,23 @@ Gant Chart of project
 
 \begin{thebibliography}{8}
 
-\bibitem{article_1}
-Castelvecchi, D. (2016). Universe has ten times more galaxies than researchers
-thought. Nature. \doi{https://doi.org/10.1038/nature.2016.20809.}
+\bibitem{JWST}
+NASA (2019). Key Facts - Webb/NASA. [online] Nasa.gov. Available at: https://jwst.nasa.gov/content/about/faqs/facts.html.
 
-% \bibitem{article_2}
-% Diego, J.A. de, Nadolny, J., Bongiovanni, Á., Cepa, J., Pović, M., García, A.M.P., Torres, C.P.P., Lara-López, M.A., Cerviño, M., Martínez, R.P., Alfaro, E.J., Castañeda, H.O., Fernández-Lorenzo, M., Gallego, J., González, J.J., González-Serrano, J.I., Pintos-Castro, I., Sánchez-Portal, M., Cedrés, B. and González-Otero, M. (2020). Galaxy classification: deep learning on the OTELO and COSMOS databases. Astronomy \& Astrophysics, [online] 638, p.A134. doi:https://doi.org/10.1051/0004-6361/202037697.
+\bibitem{HUDF}
+Hyperwall, Nasa. (2018). Hyperwall: Hubble Ultra Deep Field. [online] svs.gsfc.nasa.gov. Available at: https://svs.gsfc.nasa.gov/30946.
+
+\bibitem{EGND}
+Castelvecchi, D. (2016). Universe has ten times more galaxies than researchers thought. Nature. \doi{https://doi.org/10.1038/nature.2016.20809.}
+
+\bibitem{DLCTW}
+Singh, A. (2023). The Power of Deep Learning: How It's Changing the World. [online] Medium. Available at: https://medium.com/@Ambarish_224/the-power-of-deep-learning-how-its-changing-the-world-13780515be31 [Accessed 1 Nov. 2023].
+
+\bibitem{UIQDNN}
+Dodge, S. and Karam, L. (2016). Understanding how image quality affects deep neural networks. 2016 Eighth International Conference on Quality of Multimedia Experience (QoMEX). [online] doi:https://doi.org/10.1109/qomex.2016.7498955.
+
+\bibitem{GCDL}
+Diego, J.A. de, Nadolny, J., Bongiovanni, Á., Cepa, J., Pović, M., García, A.M.P., Torres, C.P.P., Lara-López, M.A., Cerviño, M., Martínez, R.P., Alfaro, E.J., Castañeda, H.O., Fernández-Lorenzo, M., Gallego, J., González, J.J., González-Serrano, J.I., Pintos-Castro, I., Sánchez-Portal, M., Cedrés, B. and González-Otero, M. (2020). Galaxy classification: deep learning on the OTELO and COSMOS databases. Astronomy \& Astrophysics, [online] 638, p.A134. doi:https://doi.org/10.1051/0004-6361/202037697.
 
 \end{thebibliography}
 
