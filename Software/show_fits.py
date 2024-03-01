@@ -1,15 +1,15 @@
-from astropy.io.fits import open as fits_open
+from astropy.io.fits import open as fits_open, HDUList
 from astropy.visualization import astropy_mpl_style
 from os import listdir
+from typing import Any
+
 
 # https://stackoverflow.com/questions/31028815/how-to-unzip-gz-file-using-python#44712152
-def show_fits(path: str, ax: any) -> None:
-    arr = None
-
+def show_fits(path: str, ax: Any) -> None:
     with fits_open(path) as fits_file:
-        arr = fits_file[0].data
-
+        arr: HDUList = fits_file[0].data
     ax.imshow(arr)
+
 
 import matplotlib.pyplot as plt
 

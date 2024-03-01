@@ -40,29 +40,27 @@ MORPHOLOGY_CODES: dict[str, tuple[str, str]] = {
     "AB": ("M", "1006"),
     "B": ("M", "1008"),
     # advanced
-    "SAa":  [("M", "1168"), ("M", "1327"), ("M", "2302")],
+    "SAa": [("M", "1168"), ("M", "1327"), ("M", "2302")],
     "SAab": [("M", "1168"), ("M", "1327"), ("M", "2312")],
-    "SAb":  [("M", "1168"), ("M", "1327"), ("M", "2322")],
+    "SAb": [("M", "1168"), ("M", "1327"), ("M", "2322")],
     "SAbc": [("M", "1168"), ("M", "1327"), ("M", "2332")],
-    "SAc":  [("M", "1168"), ("M", "1327"), ("M", "2341")],
+    "SAc": [("M", "1168"), ("M", "1327"), ("M", "2341")],
     "SAcd": [("M", "1168"), ("M", "1327"), ("M", "2351")],
-    "SAd":  [("M", "1168"), ("M", "1327"), ("M", "2360")],
-
-    "SABa":  [("M", "1168"), ("M", "1576"), ("M", "2302")],
+    "SAd": [("M", "1168"), ("M", "1327"), ("M", "2360")],
+    "SABa": [("M", "1168"), ("M", "1576"), ("M", "2302")],
     "SABab": [("M", "1168"), ("M", "1576"), ("M", "2312")],
-    "SABb":  [("M", "1168"), ("M", "1576"), ("M", "2322")],
+    "SABb": [("M", "1168"), ("M", "1576"), ("M", "2322")],
     "SABbc": [("M", "1168"), ("M", "1576"), ("M", "2332")],
-    "SABc":  [("M", "1168"), ("M", "1576"), ("M", "2341")],
+    "SABc": [("M", "1168"), ("M", "1576"), ("M", "2341")],
     "SABcd": [("M", "1168"), ("M", "1576"), ("M", "2351")],
-    "SABd":  [("M", "1168"), ("M", "1576"), ("M", "2360")],
-
-    "SBa":  [("M", "1168"), ("M", "1924"), ("M", "2302")],
+    "SABd": [("M", "1168"), ("M", "1576"), ("M", "2360")],
+    "SBa": [("M", "1168"), ("M", "1924"), ("M", "2302")],
     "SBab": [("M", "1168"), ("M", "1924"), ("M", "2312")],
-    "SBb":  [("M", "1168"), ("M", "1924"), ("M", "2322")],
+    "SBb": [("M", "1168"), ("M", "1924"), ("M", "2322")],
     "SBbc": [("M", "1168"), ("M", "1924"), ("M", "2332")],
-    "SBc":  [("M", "1168"), ("M", "1924"), ("M", "2341")],
+    "SBc": [("M", "1168"), ("M", "1924"), ("M", "2341")],
     "SBcd": [("M", "1168"), ("M", "1924"), ("M", "2351")],
-    "SBd":  [("M", "1168"), ("M", "1924"), ("M", "2360")],
+    "SBd": [("M", "1168"), ("M", "1924"), ("M", "2360")],
 }
 
 
@@ -95,10 +93,7 @@ def parse_page(response: Response) -> list[str]:
 
 
 def extract_data(table_rows: list[str]) -> list[Mapping]:
-    return [
-        map(lambda item: item.strip(), string.split("|"))
-        for string in table_rows
-    ]
+    return [map(lambda item: item.strip(), string.split("|")) for string in table_rows]
 
 
 def data_to_df(table_rows: list[Mapping]) -> DataFrame:
@@ -129,8 +124,7 @@ def request_all_pages(url: str, pages: int) -> DataFrame:
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         future_url_requests = {
-            executor.submit(request_pipeline, url): url
-            for url in urls
+            executor.submit(request_pipeline, url): url for url in urls
         }
 
         for future in as_completed(future_url_requests):
@@ -162,13 +156,15 @@ def morphology_search(classification: str) -> DataFrame:
 def main() -> None:
     logger = logging.Logger("Logger")
     logger.setLevel(logging.INFO)
-    
+
     morphologies = ["E", "S0", "S0/a", "A", "AB", "B"]
     queried_morphologies = map(morphology_search, morphologies)
-    galaxy_df = (df_concat([*queried_morphologies])
+    galaxy_df = (
+        df_concat([*queried_morphologies])
         .sort_values("Name", ignore_index=True)
-        .dropna())
-    
+        .dropna()
+    )
+
     galaxy_df.to_csv("./NED_list.csv", sep=",", index=False)
 
 

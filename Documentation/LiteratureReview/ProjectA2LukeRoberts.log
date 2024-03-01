@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex 2023.12.7)  1 FEB 2024 08:19
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex 2023.12.7)  1 FEB 2024 08:28
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -323,6 +323,9 @@ LaTeX Warning: Label `' multiply defined.
 
 LaTeX Warning: Label `' multiply defined.
 
+
+LaTeX Warning: Label `' multiply defined.
+
 )
 \openout1 = `ProjectA2LukeRoberts.aux'.
 
@@ -479,22 +482,14 @@ File: Screenshot_2024-02-01_03-39-05.png Graphic file (type bmp)
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [5]
-Overfull \hbox (3.29355pt too wide) in paragraph at lines 198--204
-\TU/FreeSerif(0)/m/n/12 ing). FileContainer.get_fits was used to download the f
-iles individually and then HDUList.writeto
- []
-
 File: Figure_1.png Graphic file (type bmp)
 <Figure_1.png>
 
+
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [6]
-[7]
-Underfull \hbox (badness 10000) in paragraph at lines 260--261
+[6] [7]
+Underfull \hbox (badness 10000) in paragraph at lines 262--263
 []\TU/FreeSerif(0)/m/n/9 NASA/IPAC Extragalactic Database. (n.d.) “Database hol
 dings for release 33.3.1”. [online] Available at:
  []

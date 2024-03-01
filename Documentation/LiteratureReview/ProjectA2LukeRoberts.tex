@@ -159,7 +159,7 @@ file format that the NED database contains are Flexible Image Transport System
     \caption{Output image from NED using astroquery}\label{tab1}
 \end{figure}
 
-Once image acquisition was tested, the next step was to query for a table of galaxy
+\noindent Once image acquisition was tested, the next step was to query for a table of galaxy
 names and each galaxy's associated classification using Ned.get\_table. Unfortunately
 the NED API implemented for AstroQuery did not return a column for galaxy classification 
 when tested. 
@@ -170,7 +170,7 @@ when tested.
     \caption{Output showing no classification column}\label{tab1}
 \end{figure}
 
-The API reference was consulted to determine a way to configure the NED database search,
+\noindent The API reference was consulted to determine a way to configure the NED database search,
 however, nothing that was tried gathered the classifications. A risk that was discussed
 in my project proposal was that ‘an external database [was] unavailable’ which is similar
 to the issue that was currently being faced; not having part of the database available.
@@ -195,7 +195,7 @@ used to parallelise the process of searching for pages.
 
 \newpage
 
-After creating the table of galaxies and morphologies a tool was then developed to gather
+\noindent After creating the table of galaxies and morphologies a tool was then developed to gather
 images from the NED archive. This tool used Ned.get\_image\_list to find if there were valid
 files available and took the name of the highest quality image file (always indexed at one
 from testing). FileContainer.get\_fits was used to download the files individually and then
@@ -208,7 +208,7 @@ image for illustrative purposes.
     \caption{Images downloaded from NED archives}\label{tab1}
 \end{figure}
 
-The next project steps will be preprocessing images of the dataset and building the machine
+\noindent The next project steps will be preprocessing images of the dataset and building the machine
 learning models for testing. In the project objectives, the next stage after dataset gathering
 was to analyse the images and dataset to determine how best to perform preprocessing. 
 One issue with many of the images is that most of the image is empty space, which a machine 
@@ -222,9 +222,11 @@ that appear in two or more astronomical catalogues (MESSIER, NGC, ESO, etc.), so
 any biases that could occur only one catalogue will be used to train the models that will be 
 implemented.
 
-Overall progress has been slower due to other university work, commitments and the setbacks 
+\newpage
+\noindent Overall progress has been slower due to other university work, commitments and the setbacks 
 discussed in this section. However, more focus can now be drawn to CNN model creation and 
-preprocessing for the project, now that data gathering is completed.
+preprocessing for the project, now that data gathering is completed. All of my current code
+and testing notebooks can be found on the github repository (Luke-A-C-Roberts 2024).
 
 
 % --------------------------------------------------------------------------- %
@@ -267,6 +269,9 @@ NASA/IPAC Extragalactic Database. (n.d.) “Search by Objects” https://ned.ipa
 
 \bibitem{}
 Matplotlib (2012). Matplotlib: Python plotting — Matplotlib 3.1.1 documentation. [online] Matplotlib.org. Available at: https://matplotlib.org/
+
+\bibitem{}
+Luke-A-C-Roberts (2024). Luke-A-C-Roberts/Project. [online] GitHub. Available at: https://github.com/Luke-A-C-Roberts/Project [Accessed 1 Feb. 2024].
 
 \end{thebibliography}
 
