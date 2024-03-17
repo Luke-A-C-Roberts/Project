@@ -13,12 +13,13 @@ findspark.init()
 
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StringType, IntegerType
 from pyspark.sql.functions import col, udf
 
 from pandas import DataFrame as pd_DataFrame
 
 from os import listdir
+from re import match
 
 # Might need to change these
 FOLDER_PATH  : str = "/mnt/c/Users/Computing/Downloads/"
@@ -26,15 +27,24 @@ MAPPING_FILE : str = FOLDER_PATH + "gz2_filename_mapping.csv"
 DATASET_FILE : str = FOLDER_PATH + "gz2_hart16.csv"
 IMAGES_FOLDER: str = FOLDER_PATH + "images_gz2/images/"
 
-DATASET_COLS      : list[str] = ["dr7objid", "sample", "gz2_class", "t01_smooth_or_features_a01_smooth_flag"]
+DATASET_COLS      : list[str] = ["dr7objid", "sample", "gz2_class"]
 FILENAME_DROP_COLS: list[str] = ["asset_id", "id", "sample"]
 DF_DROP_COLS      : list[str] = ["dr7objid", "objid"]
+
+CLASSIFICATION_STEM: list[str] = ["Er", "Ei", "Ec", "Ser", "Seb", "Sen", "Sa", "Sb", "Sc", "Sd", "SBa", "SBb", "SBc", "SBd"]
 
 # https://sparkbyexamples.com/pyspark/pyspark-udf-user-defined-function/
 @udf(returnType=StringType())
 def remove_jpg_extention(name: str) -> str:
     return name.removesuffix(".jpg")
 
+@udf(returnType=IntegerType())
+def classification(gz2_class: str) -> int:
+    for stem in CLASSIFICATION_STEM:
+        m = match(r"^" + stem, gz2_class)
+        if m:
+            return stem
+    return "None"
 
 def training_df() -> pd_DataFrame:
     spark: SparkSession = SparkSession.builder.getOrCreate()
@@ -63,7 +73,10 @@ def training_df() -> pd_DataFrame:
         df
         .sort(df["value"])
         .drop(*DF_DROP_COLS)
+        .withColumn("classification", classification(col("gz2_class")))
     )
 
     return df.toPandas()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+training_df().to_csv("/mnt/c/Users/Computing/Desktop/Project/Software/Final/result.csv")
