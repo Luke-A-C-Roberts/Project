@@ -19,6 +19,8 @@ from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import StringType, IntegerType
 from pyspark.sql.functions import col, udf
 
+from tensorflow._api.v2.data import Dataset
+
 from pandas import DataFrame as pd_DataFrame
 
 from os import listdir
@@ -96,6 +98,11 @@ def training_df(obj_ids: Callable[[None], DataFrame]) -> pd_DataFrame:
     )
 
     return df.toPandas()
+
+def training_data(make_df: Callable[[Callable[[None], DataFrame]], pd_DataFrame]) -> Dataset:
+    df = make_df()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
+
 # training_df(zenodo_ids).to_csv("/mnt/c/Users/Computing/Desktop/Project/Software/Final/result.csv")
+
