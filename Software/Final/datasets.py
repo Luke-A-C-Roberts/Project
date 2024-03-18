@@ -21,47 +21,49 @@ from pyspark.sql.types import StringType, IntegerType
 from pyspark.sql.functions import col, udf
 
 from tensorflow._api.v2.data import Dataset
-from tensorflow._api.v2.io import read_file as read_file
-from tensorflow._api.v2.image import decode_jpeg
-from tensorflow._api.v2.v2 import Tensor
+from tensorflow._api.v2.dtypes import string as tf_string, int32 as tf_int32, float32 as tf_float32
+from tensorflow._api.v2.io import read_file
+from tensorflow._api.v2.image import decode_jpeg, resize
+from tensorflow._api.v2.v2 import constant, map_fn, Tensor, TensorSpec
 
-from pandas import DataFrame as pd_DataFrame, Series
+from pandas import DataFrame as pd_DataFrame
 
 from functools import partial
-from itertools import starmap
 from os import listdir
 from re import match
 from typing import Callable
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
 # Might need to change these
-DOWNLOADS_PATH: str = "/mnt/c/Users/Computing/Downloads/"
+DOWNLOADS_PATH: str = "c:\\Users\\Computing\\Downloads\\" # "/mnt/c/Users/Computing/Downloads/"
 MAPPING_FILE: str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
 DATASET_FILE: str = DOWNLOADS_PATH + "gz2_hart16.csv"
-ZENODO_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images_gz2/images/"
+ZENODO_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images_gz2\\images\\"
 
 DATASET_COLS: list[str] = ["dr7objid", "sample", "gz2_class"]
 FILENAME_DROP_COLS: list[str] = ["asset_id", "id", "sample"]
 DF_DROP_COLS: list[str] = ["dr7objid", "objid"]
-CLASSIFICATION_STEM: list[str] = [
-    "Er",
-    "Ei",
-    "Ec",
-    "Ser",
-    "Seb",
-    "Sen",
-    "Sa",
-    "Sb",
-    "Sc",
-    "Sd",
-    "SBa",
-    "SBb",
-    "SBc",
-    "SBd",
-]
-CLASSIFICATION_INT: list[int] = [0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
+CLASSIFICATIONS: dict[str, int] = {
+    "Er" : 0,
+    "Ei" : 0,
+    "Ec" : 0,
+    "Ser": 1,
+    "Seb": 1,
+    "Sen": 1,
+    "Sa" : 2,
+    "Sb" : 2,
+    "Sc" : 2,
+    "Sd" : 2,
+    "SBa": 3,
+    "SBb": 3,
+    "SBc": 3,
+    "SBd": 3,
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 spark = SparkSession.builder.getOrCreate()
-
 
 # https://sparkbyexamples.com/pyspark/pyspark-udf-user-defined-function/
 @udf(returnType=StringType())
@@ -71,10 +73,9 @@ def remove_jpg_extention(name: str) -> str:
 
 @udf(returnType=IntegerType())
 def classification(gz2_class: str) -> int:
-    for stem in CLASSIFICATION_STEM:
+    for stem in CLASSIFICATIONS.keys():
         m = match(r"^" + stem, gz2_class)
-        if m:
-            return CLASSIFICATION_INT[CLASSIFICATION_STEM.index(stem)]
+        if m: return CLASSIFICATIONS[stem]
     return -1
 
 
@@ -111,35 +112,39 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
 
     df = obj_ids.join(data_set, obj_ids["objid"] == data_set["dr7objid"], how="inner")
     df = (
-        df.sort(df["value"])
+        df
         .drop(*DF_DROP_COLS)
         .withColumn("classification", classification(col("gz2_class")))
         .filter(col("classification") != -1)
+        .sort(df["value"])
     )
 
     return df.toPandas()
 
 
-def training_columns(df: pd_DataFrame) -> tuple[Series[str], Series[int]]:
-    return (df["value"], df["classification"])
+def preprocess_image(target_size: tuple[int, int], image: Tensor) -> Tensor:
+    return resize(image, target_size)
 
 
-def load_image(filepath: str, label: int) -> tuple[Tensor, int]:
-    return (decode_jpeg(read_file(filepath), channels=3), label)  # type: ignore (pylance can't type `decode_jpeg`)
+def load_image(preprocessor: partial[Tensor], file_name: str) -> Tensor:
+    return preprocessor(decode_jpeg(read_file(ZENODO_IMAGES_FOLDER + file_name)))
 
 
-def training_data(make_df: partial[pd_DataFrame]) -> Dataset:
+def training_data(make_df: partial[pd_DataFrame], target_size: tuple[int, int] = (224, 224)) -> tuple[Dataset, Dataset]:
     df: pd_DataFrame = make_df()
-    filepaths, labels = training_columns(df)
+    labels = df["classification"].tolist()
+    filenames = df["value"].tolist()
 
-    return (
-        Dataset
-        .from_tensor_slices((filepaths, labels))
-        .map(load_image)
+    load_preprocess = lambda s: load_image(partial(preprocess_image, target_size), s)
+    images = map_fn(
+        fn=load_preprocess,
+        elems=constant(filenames, dtype=tf_string),
+        fn_output_signature=TensorSpec(shape=[*target_size, 3])
     )
 
+    return (
+        Dataset.from_tensor_slices(images),
+        Dataset.from_tensor_slices(constant(labels, dtype=tf_int32))
+    )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
-
-# training_df(zenodo_ids).to_csv("/mnt/c/Users/Computing/Desktop/Project/Software/Final/result.csv")
