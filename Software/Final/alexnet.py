@@ -11,7 +11,7 @@ from keras.layers import (
     Layer,
     Dropout,
 )
-from keras.layers.experimental.preprocessing import Resizing
+from keras.layers import Resizing
 from keras.losses import SparseCategoricalCrossentropy
 from keras.optimizers import Adam
 from keras import Input
