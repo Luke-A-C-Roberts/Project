@@ -120,20 +120,22 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
     return df.toPandas()
 
 
+def training_columns(df: pd_DataFrame) -> tuple[Series[str], Series[int]]:
+    return (df["value"], df["classification"])
+
+
 def load_image(filepath: str, label: int) -> tuple[Tensor, int]:
     return (decode_jpeg(read_file(filepath), channels=3), label)  # type: ignore (pylance can't type `decode_jpeg`)
 
 
 def training_data(make_df: partial[pd_DataFrame]) -> Dataset:
     df: pd_DataFrame = make_df()
-    filepaths: list[str] = [*df["value"]]
-    labels: list[int] = [*df["classification"]]
+    filepaths, labels = training_columns(df)
 
-    dataset: Dataset = (
+    return (
         Dataset
-        .from_tensor_slices(())
+        .from_tensor_slices((filepaths, labels))
         .map(load_image)
-        
     )
 
 
