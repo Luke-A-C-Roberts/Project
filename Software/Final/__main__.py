@@ -6,8 +6,10 @@ from datasets import zenodo_ids, training_df, training_data
 
 from functools import partial
 
+
 def main():
     data = training_data(partial(training_df, zenodo_ids))
+
 
 if __name__ == "__main__":
     main()

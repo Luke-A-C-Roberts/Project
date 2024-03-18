@@ -1,4 +1,4 @@
-from tensorflow.nn import local_response_normalization
+from tensorflow._api.v2.nn import local_response_normalization
 
 from keras.models import Sequential
 from keras.layers import (
@@ -17,6 +17,7 @@ from keras.optimizers import Adam
 from keras import Input
 
 from utils import multi_layers
+from functools import partial
 
 
 # AlexNet #####################################################################
@@ -45,14 +46,16 @@ def build_alex_net(x_train_shape: int) -> Sequential:
                 height=224,
                 width=224,
                 interpolation="bilinear",
-                input_shape=x_train_shape[1:],
+                input_shape=x_train_shape,
             ),
             *alexnet_pooling_layers(filters=96, kernel_size=11),
             *alexnet_pooling_layers(filters=256, kernel_size=5),
-            *multi_layers(alexnet_conv_layers, n=2, filters=384, kernel_size=3)
-            * alexnet_conv_layers(filters=256, kernel_size=3),
+            *multi_layers(
+                partial(alexnet_conv_layers, filters=384, kernel_size=3), n=2
+            ),
+            *alexnet_conv_layers(filters=256, kernel_size=3),
             Flatten(),
-            *multi_layers(alexnet_dense_layers, n=2, units=4096),
+            *multi_layers(partial(alexnet_dense_layers, units=4096), n=2),
             Dense(10, activation="softmax"),
         ]
     )
