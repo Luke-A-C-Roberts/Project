@@ -16,7 +16,7 @@ from itertools import starmap
 from typing import Callable, Iterable, Iterator
 from utils import *
 
-from icecream import ic
+# from icecream import ic
 
 
 @dataclass(frozen=True)
@@ -205,7 +205,7 @@ def build_resnet(layers: int, output_classes: int) -> Model:
     input_layer = Input(shape=(224, 224, 3))
     x = conv_1(input_layer)  # type: ignore
     for i, multilayer_spec in enumerate(specification):
-        ic(multilayer_spec)
+        # ic(multilayer_spec)
         x = conv_x(x, i, multilayer_spec)
     output_layer = dense(x, len(specification) + 1, output_classes)
     return Model(inputs=input_layer, outputs=output_layer)
