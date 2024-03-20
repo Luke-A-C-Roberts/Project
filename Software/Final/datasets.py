@@ -4,7 +4,7 @@
 #    images: https://zenodo.org/records/3565489#.Y3vFKS-l0eY,
 #            https://portal.nersc.gov/project/dasrepo/self-supervised-learning-sdss/dataset.html
 #
-# The script assumes that windows subsystem for linux is available on your platform.
+# The script assumes that you are using a UNIX based platform or windows subsystem for linux (WSL)
 # gz2_filename_mapping.csv, gz2_hart16.csv and images_gz2 must all be found in your ...\Downloads folder.
 # NOTE: windows extract fails to extract gz2_hart16.csv correctly so use a different program like WinRAR
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -21,12 +21,20 @@ from pyspark.sql.types import StringType, IntegerType
 from pyspark.sql.functions import col, udf
 
 from tensorflow._api.v2.data import Dataset
-from tensorflow._api.v2.dtypes import string as tf_string, int32 as tf_int32, float32 as tf_float32
+from tensorflow._api.v2.dtypes import (
+    string as tf_string,
+    int32 as tf_int32,
+    float32 as tf_float32,
+)
 from tensorflow._api.v2.io import read_file
 from tensorflow._api.v2.image import decode_jpeg, resize
 from tensorflow._api.v2.v2 import constant, map_fn, Tensor, TensorSpec
+from keras.utils import Sequence
 
 from pandas import DataFrame as pd_DataFrame
+from numpy import array, ceil, int32 as np_int32
+
+from sklearn.model_selection import train_test_split
 
 from functools import partial
 from os import listdir
@@ -36,25 +44,25 @@ from typing import Callable
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 # Might need to change these
-DOWNLOADS_PATH: str = "c:\\Users\\Computing\\Downloads\\" # "/mnt/c/Users/Computing/Downloads/"
+DOWNLOADS_PATH: str = "/home/luke/Downloads/"  # "/mnt/c/Users/Computing/Downloads/"
 MAPPING_FILE: str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
 DATASET_FILE: str = DOWNLOADS_PATH + "gz2_hart16.csv"
-ZENODO_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images_gz2\\images\\"
-
+ZENODO_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images_gz2/images/"
 DATASET_COLS: list[str] = ["dr7objid", "sample", "gz2_class"]
-FILENAME_DROP_COLS: list[str] = ["asset_id", "id", "sample"]
 DF_DROP_COLS: list[str] = ["dr7objid", "objid"]
+FILENAME_DROP_COLS: list[str] = ["asset_id", "id", "sample"]
+
 CLASSIFICATIONS: dict[str, int] = {
-    "Er" : 0,
-    "Ei" : 0,
-    "Ec" : 0,
+    "Er": 0,
+    "Ei": 0,
+    "Ec": 0,
     "Ser": 1,
     "Seb": 1,
     "Sen": 1,
-    "Sa" : 2,
-    "Sb" : 2,
-    "Sc" : 2,
-    "Sd" : 2,
+    "Sa": 2,
+    "Sb": 2,
+    "Sc": 2,
+    "Sd": 2,
     "SBa": 3,
     "SBb": 3,
     "SBc": 3,
@@ -65,21 +73,29 @@ CLASSIFICATIONS: dict[str, int] = {
 
 spark = SparkSession.builder.getOrCreate()
 
-# https://sparkbyexamples.com/pyspark/pyspark-udf-user-defined-function/
+
+# [1]
 @udf(returnType=StringType())
 def remove_jpg_extention(name: str) -> str:
+    """
+    pyspark udf function for removing the .jpg extention from image files
+    """
     return name.removesuffix(".jpg")
 
 
 @udf(returnType=IntegerType())
 def classification(gz2_class: str) -> int:
+    """
+    pyspark udf that generates the correct class id (see `CLASSIFICATIONS`)
+    """
     for stem in CLASSIFICATIONS.keys():
         m = match(r"^" + stem, gz2_class)
-        if m: return CLASSIFICATIONS[stem]
+        if m:
+            return CLASSIFICATIONS[stem]
     return -1
 
 
-# https://zenodo.org/records/3565489#.Y3vFKS-l0eY
+# [2]
 def zenodo_ids() -> DataFrame:
     """
     zenodo_id gets the object IDs from the extentions in
@@ -112,8 +128,7 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
 
     df = obj_ids.join(data_set, obj_ids["objid"] == data_set["dr7objid"], how="inner")
     df = (
-        df
-        .drop(*DF_DROP_COLS)
+        df.drop(*DF_DROP_COLS)
         .withColumn("classification", classification(col("gz2_class")))
         .filter(col("classification") != -1)
         .sort(df["value"])
@@ -123,28 +138,71 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
 
 
 def preprocess_image(target_size: tuple[int, int], image: Tensor) -> Tensor:
+    """
+    preprocessing performed on each image tensor. `target_size` is the size to rescale to
+    """
     return resize(image, target_size)
 
 
 def load_image(preprocessor: partial[Tensor], file_name: str) -> Tensor:
+    """
+    loads an image by name and performs a specified `preprocessor` function afterwards
+    """
     return preprocessor(decode_jpeg(read_file(ZENODO_IMAGES_FOLDER + file_name)))
 
 
-def training_data(make_df: partial[pd_DataFrame], target_size: tuple[int, int] = (224, 224)) -> tuple[Dataset, Dataset]:
+# [3]
+class BatchGenerator(Sequence):
+    def __init__(
+        self,
+        image_filenames: list[str],
+        labels: list[int],
+        batch_size: int,
+        load_preprocess: Callable[[str], Tensor],
+    ) -> None:
+        self._image_filenames: list[str] = image_filenames
+        self._labels: list[int] = labels
+        self._batch_size: int = batch_size
+        self._load_preprocess: Callable[[str], Tensor] = load_preprocess
+
+    def __len__(self) -> np_int32:
+        return (ceil(len(self._image_filenames) / float(self._batch_size))).astype(np_int32)
+
+    def __getitem__(self, index):
+        filenames_batch = self._image_filenames[
+            batch_slice := slice(
+                index * self._batch_size, (index + 1) * self._batch_size
+            )
+        ]
+        labels_batch = self._labels[batch_slice]
+        return array([*map(self._load_preprocess, filenames_batch)]) / 255.0, array(
+            labels_batch
+        )
+
+
+def training_data(
+    make_df: partial[pd_DataFrame],
+    batch_size: int = 32,
+    target_size: tuple[int, int] = (224, 224),
+) -> tuple[BatchGenerator, BatchGenerator]:
     df: pd_DataFrame = make_df()
-    labels = df["classification"].tolist()
-    filenames = df["value"].tolist()
+    x_train, x_test, y_train, y_test = train_test_split(
+        df["value"].tolist(),
+        df["classification"].tolist(),
+        train_size=0.8,
+        shuffle=True
+    )
 
+    # `load_preprocess` is higher order requiring a partial preprocessing method.
+    # the inner partial function specifies the size of the preprocessed image.
     load_preprocess = lambda s: load_image(partial(preprocess_image, target_size), s)
-    images = map_fn(
-        fn=load_preprocess,
-        elems=constant(filenames, dtype=tf_string),
-        fn_output_signature=TensorSpec(shape=[*target_size, 3])
+    return (
+        BatchGenerator(x_train, y_train, batch_size, load_preprocess),
+        BatchGenerator(x_test, y_test, batch_size, load_preprocess),
     )
 
-    return (
-        Dataset.from_tensor_slices(images),
-        Dataset.from_tensor_slices(constant(labels, dtype=tf_int32))
-    )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+[1] # https://sparkbyexamples.com/pyspark/pyspark-udf-user-defined-function/
+[2] # https://zenodo.org/records/3565489#.Y3vFKS-l0eY
+[3] # https://gist.github.com/mrrajatgarg/6b55c86868d6376bb108ce7992595bb0#file-training_on_large_datasets_7-py

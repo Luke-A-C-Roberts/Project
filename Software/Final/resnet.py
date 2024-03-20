@@ -11,6 +11,9 @@ from keras.layers import (
     GlobalAveragePooling2D,
     Dense,
 )
+from keras.losses import SparseCategoricalCrossentropy
+from keras.optimizers import Adam
+
 from dataclasses import dataclass
 from itertools import starmap
 from typing import Callable, Iterable, Iterator
@@ -21,6 +24,11 @@ from utils import *
 
 @dataclass(frozen=True)
 class LayerSpec(Iterable):
+    """
+    lowest level of architecture hierarchy. `filters` is used to repeat the
+    layer many times
+    """
+
     kernel_size: int
     filters: int
 
@@ -30,6 +38,11 @@ class LayerSpec(Iterable):
 
 @dataclass(frozen=True)
 class MultiLayerSpec(Iterable):
+    """
+    each section of the resnet model specifies which layers are present and how
+    many times to repeat the layer. `use_strides` is used when the
+    """
+
     layer_specs: list[LayerSpec]
     repetitions: int
     use_strides: bool = True
@@ -120,7 +133,7 @@ RESNET_SPECIFICATIONS: dict[int, ResnetSpec] = {
 }
 
 
-# https://github.com/keras-team/keras/blob/master/keras/applications/resnet.py
+# [1]
 def conv_1(input_layer: Layer) -> Layer:
     layers = [
         ZeroPadding2D(padding=pad(3), name="conv0_pad1"),
@@ -208,7 +221,17 @@ def build_resnet(layers: int, output_classes: int) -> Model:
         # ic(multilayer_spec)
         x = conv_x(x, i, multilayer_spec)
     output_layer = dense(x, len(specification) + 1, output_classes)
-    return Model(inputs=input_layer, outputs=output_layer)
+    
+    resnet = Model(inputs=input_layer, outputs=output_layer)
 
+    resnet.compile(
+        loss=SparseCategoricalCrossentropy(from_logits=True),
+        optimizer=Adam(lr=3e-4),
+        metrics=["accuracy"],
+    )
+
+    return resnet
 
 # resnet(34, 10).summary()
+
+[1] # https://github.com/keras-team/keras/blob/master/keras/applications/resnet.py
