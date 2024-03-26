@@ -181,9 +181,7 @@ def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
             x = Activation(
                 activation="relu",
                 name="{0}_activation{1}".format(layer_name, layer_num),
-            )(
-                x
-            )  # type: ignore (pylance can't type `Add`)
+            )(x)  # type: ignore (pylance can't type `Add`)
 
     return x
 

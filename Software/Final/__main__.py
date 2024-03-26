@@ -4,7 +4,12 @@ from datasets import zenodo_ids, training_df, training_data
 
 from tensorflow._api.v2.v2 import device
 from tensorflow._api.v2.compat.v1 import ConfigProto, Session
-from sklearn.model_selection import train_test_split
+from keras.callbacks import History
+from pandas import DataFrame
+
+from keras.applications import ResNet50
+from keras.losses import SparseCategoricalCrossentropy
+from keras.optimizers import Adam    
 
 from functools import partial
 
@@ -29,10 +34,15 @@ def main():
             target_size=TARGET_SIZE,
         )
         # alexnet = build_alex_net()
-        resnet = build_resnet(34, 4)
-
-        # [2]
-        resnet.fit_generator(
+        # model = build_resnet(50, 4)
+        model = ResNet50(weights=None, classes=4, classifier_activation="softmax")
+        model.compile(
+            loss=SparseCategoricalCrossentropy(from_logits=True),
+            optimizer=Adam(lr=3e-4),
+            metrics=["accuracy"],
+        )
+        
+        history: History = model.fit_generator(
             generator=training_generator,
             steps_per_epoch=TRAINING_EPOCH_STEPS // BATCH_SIZE,
             epochs=EPOCHS,
@@ -41,6 +51,9 @@ def main():
             validation_steps=TESTING_EPOCH_STEPS // BATCH_SIZE,
         )
 
+        DataFrame(history.history).to_csv(
+            "/home/luke/Documents/Work/Project/Software/Final/resnet50_training_log.csv"
+        )
 
 if __name__ == "__main__":
     main()

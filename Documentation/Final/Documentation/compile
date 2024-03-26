@@ -1,0 +1,103 @@
+#!/usr/bin/elixir
+
+defmodule CompileFinal do
+  
+  defp sub_dir(), do: "Sections"
+  
+  defp final(), do: "final.tex"
+  
+  defp get_files(), do:
+    System.shell("ls " <> sub_dir())
+    |> elem(0)
+  
+  defp strings(s), do:
+    String.split(s, "\n")
+    |> Enum.map(&(sub_dir() <> "/" <> &1)) 
+  
+  defp markdown?(s), do:
+    String.ends_with? s, ".md"
+  
+  defp latex?(s), do:
+    String.ends_with? s, ".tex"
+  
+  defp filter_markdowns(arr), do:
+    Enum.filter arr, &(markdown?(&1))
+
+  defp filter_latexes(arr), do:
+    Enum.filter arr, &(latex?(&1))
+  
+  defp replace_md_tex(s), do:
+    String.replace s, ".md", ".tex"
+  
+  defp compile_markdown(s) do
+    IO.puts("compiling " <> s)
+    System.shell(
+      "pandoc "
+      <> s
+      <> " -o "
+      <> replace_md_tex(s)
+    )
+  end
+
+  defp compile_markdowns(arr), do:
+    Enum.map arr, &(compile_markdown(&1))
+
+  defp cat_latexes(arr) do
+    System.shell (
+      "cat "
+      <> Enum.join(arr, " ")
+      <> " >> "
+      <> final()
+    )
+  end
+
+  defp remove_all(arr), do:
+    Enum.map arr, &(System.shell "rm " <> &1)
+
+  defp yield_hypertargets(s, arr) when s == "", do: Enum.join arr
+  defp yield_hypertargets(s, arr) do
+    re = ~r/^\\hypertarget\{[A-Za-z ]+\}\{%\n\\subsection\{[A-Za-z ]+\}\\label\{[A-Za-z ]+\}\}/
+    result = Regex.run(re, s, [])
+
+    if result == nil do
+      [head|tail] = String.to_charlist(s)
+      yield_hypertargets(tail, arr ++ String.Chars.List.to_string([head]))
+    else
+      result = hd result
+      re = ~r/\\subsection\{[A-Za-z ]+\}/
+      new_result = hd Regex.run(re, result, [])
+      range = Range.new(String.length(result), String.length(s))
+      yield_hypertargets(String.slice(s, range), arr ++ new_result)
+    end
+  end
+
+  defp remove_hypertarget() do 
+    content = File.read!(final())
+    IO.puts(content)
+    refined = yield_hypertargets(content, [])
+    File.write!(final(), refined)
+  end  
+  
+  def compile_all() do
+    md_files = get_files()
+    |> strings
+    |> filter_markdowns
+    compile_markdowns md_files
+
+    tex_files = get_files()
+    |> strings
+    |> filter_latexes
+    cat_latexes tex_files
+
+    remove_hypertarget()
+    
+    System.shell "xelatex " <> final()
+    System.shell "rm " <> final()
+
+    compiled_files = Enum.map md_files, &(replace_md_tex &1)
+    remove_all compiled_files
+  end
+  
+end
+
+CompileFinal.compile_all()
