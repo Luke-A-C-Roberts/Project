@@ -1,24 +1,23 @@
-from tensorflow._api.v2.nn import local_response_normalization
+from utils import multi_layers
 
+from tensorflow._api.v2.nn import local_response_normalization
 from keras.models import Sequential
 from keras.layers import (
     Conv2D,
     Dense,
-    MaxPooling2D,
     Flatten,
+    MaxPooling2D,
     Lambda,
     Activation,
     Layer,
     Dropout,
+    Resizing
 )
-from keras.layers import Resizing
 from keras.losses import SparseCategoricalCrossentropy
 from keras.optimizers import Adam
 from keras import Input
 
-from utils import multi_layers
 from functools import partial
-
 
 # AlexNet #####################################################################
 def alexnet_pooling_layers(filters: int, kernel_size: int, name: str) -> list[Layer]:
@@ -33,28 +32,33 @@ def alexnet_pooling_layers(filters: int, kernel_size: int, name: str) -> list[La
 def alexnet_conv_layers(filters: int, kernel_size: int, name: int) -> list[Layer]:
     return [
         Conv2D(filters, kernel_size, strides=4, padding="same", name=f"{name}_conv2d"),
-        Activation("relu", name=f"{name}_activation")
+        Activation("relu", name=f"{name}_activation"),
     ]
 
 
 def alexnet_dense_layers(units: int, name: str) -> list[Layer]:
-    return [Dense(units, activation="relu", name=f"{name}_dense"), Dropout(0.5, name=f"{name}_dropout")]
+    return [
+        Dense(units, activation="relu", name=f"{name}_dense"),
+        Dropout(0.5, name=f"{name}_dropout"),
+    ]
 
 
 # [1]
 def build_alex_net(outputs: int) -> Sequential:
-    alexnet = Sequential([
-        Resizing(height=224, width=224, interpolation="bilinear", name="resizing"),
-        *alexnet_pooling_layers(filters=96, kernel_size=11, name="pooling1"),
-        *alexnet_pooling_layers(filters=256, kernel_size=5, name="pooling2"),      
-        *alexnet_conv_layers(filters=384, kernel_size=3, name="conv1"),
-        *alexnet_conv_layers(filters=384, kernel_size=3, name="conv2"),
-        *alexnet_conv_layers(filters=256, kernel_size=3, name="conv3"),
-        Flatten(name="flatten"),
-        *alexnet_dense_layers(units=4096, name="dense1"),
-        *alexnet_dense_layers(units=4096, name="dense2"),
-        Dense(outputs, activation="softmax"),
-    ])
+    alexnet = Sequential(
+        [
+            Resizing(height=224, width=224, interpolation="bilinear", name="resizing"),
+            *alexnet_pooling_layers(filters=96, kernel_size=11, name="pooling1"),
+            *alexnet_pooling_layers(filters=256, kernel_size=5, name="pooling2"),
+            *alexnet_conv_layers(filters=384, kernel_size=3, name="conv1"),
+            *alexnet_conv_layers(filters=384, kernel_size=3, name="conv2"),
+            *alexnet_conv_layers(filters=256, kernel_size=3, name="conv3"),
+            Flatten(name="flatten"),
+            *alexnet_dense_layers(units=4096, name="dense1"),
+            *alexnet_dense_layers(units=4096, name="dense2"),
+            Dense(outputs, activation="softmax"),
+        ]
+    )
 
     alexnet.compile(
         loss=SparseCategoricalCrossentropy(from_logits=True),

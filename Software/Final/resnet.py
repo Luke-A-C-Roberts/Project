@@ -16,126 +16,20 @@ from keras.optimizers import Adam
 
 from dataclasses import dataclass
 from itertools import starmap
-from typing import Callable, Iterable, Iterator
+from typing import Callable
+
+from resnet_specification import (
+    LayerSpec,
+    MultiLayerSpec,
+    ResnetSpec,
+    RESNET_SPECIFICATIONS,
+)
 from utils import *
-
-# from icecream import ic
-
-
-@dataclass(frozen=True)
-class LayerSpec(Iterable):
-    """
-    lowest level of architecture hierarchy. `filters` is used to repeat the
-    layer many times
-    """
-
-    kernel_size: int
-    filters: int
-
-    def __iter__(self) -> Iterator:
-        return iter([self.kernel_size, self.filters])
-
-
-@dataclass(frozen=True)
-class MultiLayerSpec(Iterable):
-    """
-    each section of the resnet model specifies which layers are present and how
-    many times to repeat the layer. `use_strides` is used when the
-    """
-
-    layer_specs: list[LayerSpec]
-    repetitions: int
-    use_strides: bool = True
-
-    def __iter__(self) -> Iterator:
-        return iter(map(tuple, self.layer_specs))
-
-    def __len__(self) -> int:
-        return len(self.layer_specs)
-
-
-@dataclass(frozen=True)
-class ResnetSpec(Iterable):
-    multi_layer_specs: list[MultiLayerSpec]
-
-    def __iter__(self) -> Iterator:
-        return iter(self.multi_layer_specs)
-
-    def __len__(self) -> int:
-        return len(self.multi_layer_specs)
-
-
-RESNET_SPECIFICATIONS: dict[int, ResnetSpec] = {
-    18: ResnetSpec(
-        [
-            MultiLayerSpec([LayerSpec(3, 64), LayerSpec(3, 64)], 2, False),
-            MultiLayerSpec([LayerSpec(3, 128), LayerSpec(3, 128)], 2),
-            MultiLayerSpec([LayerSpec(3, 256), LayerSpec(3, 256)], 2),
-            MultiLayerSpec([LayerSpec(3, 512), LayerSpec(3, 512)], 2),
-        ]
-    ),
-    34: ResnetSpec(
-        [
-            MultiLayerSpec([LayerSpec(3, 64), LayerSpec(3, 64)], 3, False),
-            MultiLayerSpec([LayerSpec(3, 128), LayerSpec(3, 128)], 4),
-            MultiLayerSpec([LayerSpec(3, 256), LayerSpec(3, 256)], 6),
-            MultiLayerSpec([LayerSpec(3, 512), LayerSpec(3, 512)], 3),
-        ]
-    ),
-    50: ResnetSpec(
-        [
-            MultiLayerSpec(
-                [LayerSpec(1, 64), LayerSpec(3, 64), LayerSpec(1, 256)], 3, False
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 128), LayerSpec(3, 128), LayerSpec(1, 512)], 4
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 256), LayerSpec(3, 256), LayerSpec(1, 1024)], 6
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 512), LayerSpec(3, 512), LayerSpec(1, 2048)], 3
-            ),
-        ]
-    ),
-    101: ResnetSpec(
-        [
-            MultiLayerSpec(
-                [LayerSpec(1, 64), LayerSpec(3, 64), LayerSpec(1, 256)], 3, False
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 128), LayerSpec(3, 128), LayerSpec(1, 512)], 4
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 256), LayerSpec(3, 256), LayerSpec(1, 1024)], 23
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 512), LayerSpec(3, 512), LayerSpec(1, 2048)], 3
-            ),
-        ]
-    ),
-    152: ResnetSpec(
-        [
-            MultiLayerSpec(
-                [LayerSpec(1, 64), LayerSpec(3, 64), LayerSpec(1, 256)], 3, False
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 128), LayerSpec(3, 128), LayerSpec(1, 512)], 8
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 256), LayerSpec(3, 256), LayerSpec(1, 1024)], 36
-            ),
-            MultiLayerSpec(
-                [LayerSpec(1, 512), LayerSpec(3, 512), LayerSpec(1, 2048)], 3
-            ),
-        ]
-    ),
-}
 
 
 # [1]
 def conv_1(input_layer: Layer) -> Layer:
-    layers = [
+    layers: list[Layer] = [
         ZeroPadding2D(padding=pad(3), name="conv0_pad1"),
         Conv2D(filters=64, kernel_size=7, strides=2, name="conv0_conv"),
         BatchNormalization(name="conv0_norm"),
@@ -146,10 +40,10 @@ def conv_1(input_layer: Layer) -> Layer:
 
 
 def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
-    use_strides = multilayer_spec.use_strides
+    use_strides: bool = multilayer_spec.use_strides
     for repetition in range(multilayer_spec.repetitions):
-        layer_name = "conv{0}_{1}".format(index + 1, repetition)
-        shortcut_layers = [
+        layer_name: str = "conv{0}_{1}".format(index + 1, repetition)
+        shortcut_layers: list[Layer] = [
             Conv2D(
                 filters=multilayer_spec.layer_specs[-1].filters,
                 kernel_size=1,
@@ -158,7 +52,7 @@ def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
             ),
             BatchNormalization(name="{0}_shortcut_norm".format(layer_name)),
         ]
-        shortcut = pipeline(shortcut_layers, x)
+        shortcut: Layer = pipeline(shortcut_layers, x)
 
         for layer_num, (kernel_size, filters) in enumerate(multilayer_spec):
             layers = [
@@ -219,7 +113,7 @@ def build_resnet(layers: int, output_classes: int) -> Model:
         # ic(multilayer_spec)
         x = conv_x(x, i, multilayer_spec)
     output_layer = dense(x, len(specification) + 1, output_classes)
-    
+
     resnet = Model(inputs=input_layer, outputs=output_layer)
 
     resnet.compile(
@@ -229,7 +123,5 @@ def build_resnet(layers: int, output_classes: int) -> Model:
     )
 
     return resnet
-
-# resnet(34, 10).summary()
 
 [1] # https://github.com/keras-team/keras/blob/master/keras/applications/resnet.py

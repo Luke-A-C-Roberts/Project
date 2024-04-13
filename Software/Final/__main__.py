@@ -4,12 +4,9 @@ from datasets import zenodo_ids, training_df, training_data
 
 from tensorflow._api.v2.v2 import device
 from tensorflow._api.v2.compat.v1 import ConfigProto, Session
+from keras.models import Model
 from keras.callbacks import History
 from pandas import DataFrame
-
-from keras.applications import ResNet50
-from keras.losses import SparseCategoricalCrossentropy
-from keras.optimizers import Adam    
 
 from functools import partial
 
@@ -21,7 +18,7 @@ TRAINING_EPOCH_STEPS: int = 3800
 TESTING_EPOCH_STEPS: int = 950
 
 
-def main():
+def main() -> None:
     # [1]
     config = ConfigProto()
     config.gpu_options.allow_growth = True
@@ -34,14 +31,8 @@ def main():
             target_size=TARGET_SIZE,
         )
         # alexnet = build_alex_net()
-        # model = build_resnet(50, 4)
-        model = ResNet50(weights=None, classes=4, classifier_activation="softmax")
-        model.compile(
-            loss=SparseCategoricalCrossentropy(from_logits=True),
-            optimizer=Adam(lr=3e-4),
-            metrics=["accuracy"],
-        )
-        
+        model: Model = build_resnet(50, 4)
+
         history: History = model.fit_generator(
             generator=training_generator,
             steps_per_epoch=TRAINING_EPOCH_STEPS // BATCH_SIZE,
@@ -54,6 +45,7 @@ def main():
         DataFrame(history.history).to_csv(
             "/home/luke/Documents/Work/Project/Software/Final/resnet50_training_log.csv"
         )
+
 
 if __name__ == "__main__":
     main()

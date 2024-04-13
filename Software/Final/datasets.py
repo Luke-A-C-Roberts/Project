@@ -20,19 +20,15 @@ from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import StringType, IntegerType
 from pyspark.sql.functions import col, udf
 
-from tensorflow._api.v2.data import Dataset
-from tensorflow._api.v2.dtypes import (
-    string as tf_string,
-    int32 as tf_int32,
-    float32 as tf_float32,
-)
 from tensorflow._api.v2.io import read_file
 from tensorflow._api.v2.image import decode_jpeg, resize
-from tensorflow._api.v2.v2 import constant, map_fn, Tensor, TensorSpec
+from tensorflow._api.v2.v2 import Tensor, convert_to_tensor
+
 from keras.utils import Sequence
 
 from pandas import DataFrame as pd_DataFrame
-from numpy import array, ceil, int32 as np_int32
+from numpy import array, ceil, int32 as np_int32, ndarray
+from cv2 import fastNlMeansDenoisingColored, threshold, THRESH_TOZERO
 
 from sklearn.model_selection import train_test_split
 
@@ -44,25 +40,25 @@ from typing import Callable
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 # Might need to change these
-DOWNLOADS_PATH: str = "/home/luke/Downloads/"  # "/mnt/c/Users/Computing/Downloads/"
-MAPPING_FILE: str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
-DATASET_FILE: str = DOWNLOADS_PATH + "gz2_hart16.csv"
+DOWNLOADS_PATH      : str = "/home/luke/Downloads/"  # "/mnt/c/Users/Computing/Downloads/"
+MAPPING_FILE        : str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
+DATASET_FILE        : str = DOWNLOADS_PATH + "gz2_hart16.csv"
 ZENODO_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images_gz2/images/"
-DATASET_COLS: list[str] = ["dr7objid", "sample", "gz2_class"]
-DF_DROP_COLS: list[str] = ["dr7objid", "objid"]
-FILENAME_DROP_COLS: list[str] = ["asset_id", "id", "sample"]
+DATASET_COLS        : list[str] = ["dr7objid", "sample", "gz2_class"]
+DF_DROP_COLS        : list[str] = ["dr7objid", "objid"]
+FILENAME_DROP_COLS  : list[str] = ["asset_id", "id", "sample"]
 
 CLASSIFICATIONS: dict[str, int] = {
-    "Er": 0,
-    "Ei": 0,
-    "Ec": 0,
+    "Er" : 0,
+    "Ei" : 0,
+    "Ec" : 0,
     "Ser": 1,
     "Seb": 1,
     "Sen": 1,
-    "Sa": 2,
-    "Sb": 2,
-    "Sc": 2,
-    "Sd": 2,
+    "Sa" : 2,
+    "Sb" : 2,
+    "Sc" : 2,
+    "Sd" : 2,
     "SBa": 3,
     "SBb": 3,
     "SBc": 3,
@@ -70,9 +66,6 @@ CLASSIFICATIONS: dict[str, int] = {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
-spark = SparkSession.builder.getOrCreate()
-
 
 # [1]
 @udf(returnType=StringType())
@@ -96,7 +89,7 @@ def classification(gz2_class: str) -> int:
 
 
 # [2]
-def zenodo_ids() -> DataFrame:
+def zenodo_ids(session: SparkSession) -> DataFrame:
     """
     zenodo_id gets the object IDs from the extentions in
     /mnt/c/Users/Computing/Downloads/images_gz2/images/ once they have been
@@ -112,7 +105,9 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
     """
     training df, takes an fuction that gives a dataframe of IDs and produces a
     list of existing image files names and classification numbers.
-    """
+    """  
+    spark = SparkSession.builder.getOrCreate()
+    
     mapping_names: DataFrame = spark.read.csv(
         path=MAPPING_FILE, header=True, inferSchema=True
     )
@@ -121,7 +116,7 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
         path=DATASET_FILE, header=True, inferSchema=True
     ).select(*DATASET_COLS)
 
-    obj_ids: DataFrame = obj_func()
+    obj_ids: DataFrame = obj_func(spark)
     obj_ids = obj_ids.join(
         mapping_names, obj_ids["id"] == mapping_names["asset_id"], how="inner"
     ).drop(*FILENAME_DROP_COLS)
@@ -133,15 +128,48 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
         .filter(col("classification") != -1)
         .sort(df["value"])
     )
+    
+    pandas_df: pd_DataFrame = df.toPandas()
+    
+    spark.stop()
 
-    return df.toPandas()
+    return pandas_df
+
+
+def denoise (src: ndarray) -> ndarray:
+    """
+    de-noises the image with open-cv fastNlMeansDenoisingColored
+    """
+    return fastNlMeansDenoisingColored(
+        src=src,
+        dst=None,
+        h=10,
+        hColor=10,
+        templateWindowSize=7,
+        searchWindowSize=21
+    )
+
+
+def zero_under_threshold(src: ndarray, thresh: int) -> ndarray:
+    """
+    all pixles under a certain value are set to zero to remove background noise
+    over a certain threashold value
+    """
+    return threshold(
+        src=src,
+        thresh=thresh,
+        maxval=0,
+        type=THRESH_TOZERO,
+        dst=None
+    )[1]
 
 
 def preprocess_image(target_size: tuple[int, int], image: Tensor) -> Tensor:
     """
     preprocessing performed on each image tensor. `target_size` is the size to rescale to
     """
-    return resize(image, target_size)
+    
+    return resize(convert_to_tensor(zero_under_threshold(denoise(image.numpy()), 10)), target_size)
 
 
 def load_image(preprocessor: partial[Tensor], file_name: str) -> Tensor:
@@ -166,7 +194,9 @@ class BatchGenerator(Sequence):
         self._load_preprocess: Callable[[str], Tensor] = load_preprocess
 
     def __len__(self) -> np_int32:
-        return (ceil(len(self._image_filenames) / float(self._batch_size))).astype(np_int32)
+        return (ceil(len(self._image_filenames) / float(self._batch_size))).astype(
+            np_int32
+        )
 
     def __getitem__(self, index):
         filenames_batch = self._image_filenames[
@@ -185,12 +215,13 @@ def training_data(
     batch_size: int = 32,
     target_size: tuple[int, int] = (224, 224),
 ) -> tuple[BatchGenerator, BatchGenerator]:
+
     df: pd_DataFrame = make_df()
     x_train, x_test, y_train, y_test = train_test_split(
         df["value"].tolist(),
         df["classification"].tolist(),
         train_size=0.8,
-        shuffle=True
+        shuffle=True,
     )
 
     # `load_preprocess` is higher order requiring a partial preprocessing method.
