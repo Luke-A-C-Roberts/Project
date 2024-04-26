@@ -62,7 +62,7 @@ def build_alex_net(outputs: int) -> Sequential:
 
     alexnet.compile(
         loss=SparseCategoricalCrossentropy(from_logits=True),
-        optimizer=Adam(lr=3e-4),
+        optimizer=Adam(),
         metrics=["accuracy"],
     )
 
