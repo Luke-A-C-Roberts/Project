@@ -1,7 +1,7 @@
 from model_specification import LayerSpec, MultiLayerSpec
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, Iterator
 
 
 @dataclass(frozen=True)
