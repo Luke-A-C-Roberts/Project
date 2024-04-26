@@ -6,6 +6,7 @@ from tensorflow._api.v2.v2 import device
 from tensorflow._api.v2.compat.v1 import ConfigProto, Session
 from keras.models import Model
 from keras.callbacks import History
+
 from pandas import DataFrame
 
 from functools import partial
@@ -30,20 +31,20 @@ def main() -> None:
             batch_size=BATCH_SIZE,
             target_size=TARGET_SIZE,
         )
-        # alexnet = build_alex_net()
+        # model = build_alex_net(4)
         model: Model = build_resnet(50, 4)
 
-        history: History = model.fit_generator(
-            generator=training_generator,
+        # [2] NOTE: fit_generator is depreciated so just use fit
+        history: History = model.fit(
+            x=training_generator,
             steps_per_epoch=TRAINING_EPOCH_STEPS // BATCH_SIZE,
-            epochs=EPOCHS,
-            verbose=VERBOSITY,
             validation_data=testing_generator,
             validation_steps=TESTING_EPOCH_STEPS // BATCH_SIZE,
+            epochs=EPOCHS,
         )
-
+        
         DataFrame(history.history).to_csv(
-            "/home/luke/Documents/Work/Project/Software/Final/resnet50_training_log.csv"
+            "/home/computing/Project/Software/Final/resnet50_training_log.csv"
         )
 
 
