@@ -28,7 +28,7 @@ from keras.utils import Sequence
 
 from pandas import DataFrame as pd_DataFrame
 from numpy import array, ceil, int32 as np_int32, ndarray
-from cv2 import fastNlMeansDenoisingColored, threshold, THRESH_TOZERO
+# from cv2 import fastNlMeansDenoisingColored, threshold, THRESH_TOZERO
 
 from sklearn.model_selection import train_test_split
 
@@ -40,10 +40,10 @@ from typing import Callable
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 # Might need to change these
-DOWNLOADS_PATH      : str = "/home/luke/Downloads/"  # "/mnt/c/Users/Computing/Downloads/"
+DOWNLOADS_PATH      : str = "/home/computing/Downloads/"  # "/mnt/c/Users/Computing/Downloads/"
 MAPPING_FILE        : str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
 DATASET_FILE        : str = DOWNLOADS_PATH + "gz2_hart16.csv"
-ZENODO_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images_gz2/images/"
+ZENODO_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images/"
 DATASET_COLS        : list[str] = ["dr7objid", "sample", "gz2_class"]
 DF_DROP_COLS        : list[str] = ["dr7objid", "objid"]
 FILENAME_DROP_COLS  : list[str] = ["asset_id", "id", "sample"]
@@ -96,7 +96,7 @@ def zenodo_ids(session: SparkSession) -> DataFrame:
     downloaded from https://zenodo.org/records/3565489#.Y3vFKS-l0eY. Make sure
     both the images_gz2 and gz2_filename_mapping.csv are downloaded.
     """
-    return spark.createDataFrame(
+    return session.createDataFrame(
         listdir(ZENODO_IMAGES_FOLDER), schema=StringType()
     ).withColumn("id", remove_jpg_extention(col("value")))
 
@@ -136,40 +136,45 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
     return pandas_df
 
 
-def denoise (src: ndarray) -> ndarray:
-    """
-    de-noises the image with open-cv fastNlMeansDenoisingColored
-    """
-    return fastNlMeansDenoisingColored(
-        src=src,
-        dst=None,
-        h=10,
-        hColor=10,
-        templateWindowSize=7,
-        searchWindowSize=21
-    )
+# def denoise (src: ndarray) -> ndarray:
+#     """
+#     de-noises the image with open-cv fastNlMeansDenoisingColored
+#     """
+#     return fastNlMeansDenoisingColored(
+#         src=src,
+#         dst=None,
+#         h=10,
+#         hColor=10,
+#         templateWindowSize=7,
+#         searchWindowSize=21
+#     )
 
 
-def zero_under_threshold(src: ndarray, thresh: int) -> ndarray:
-    """
-    all pixles under a certain value are set to zero to remove background noise
-    over a certain threashold value
-    """
-    return threshold(
-        src=src,
-        thresh=thresh,
-        maxval=0,
-        type=THRESH_TOZERO,
-        dst=None
-    )[1]
+# def zero_under_threshold(src: ndarray, thresh: int) -> ndarray:
+#     """
+#     all pixles under a certain value are set to zero to remove background noise
+#     over a certain threashold value
+#     """
+#     return threshold(
+#         src=src,
+#         thresh=thresh,
+#         maxval=0,
+#         type=THRESH_TOZERO,
+#         dst=None
+#     )[1]
 
 
-def preprocess_image(target_size: tuple[int, int], image: Tensor) -> Tensor:
-    """
-    preprocessing performed on each image tensor. `target_size` is the size to rescale to
-    """
+def old_preprocess_image(target_size: tuple[int, int], image: Tensor) -> Tensor:
+
+    return resize(image, target_size)
+
+
+# def preprocess_image(target_size: tuple[int, int], image: Tensor) -> Tensor:
+#     """
+#     preprocessing performed on each image tensor. `target_size` is the size to rescale to
+#     """
     
-    return resize(convert_to_tensor(zero_under_threshold(denoise(image.numpy()), 10)), target_size)
+#     return resize(convert_to_tensor(zero_under_threshold(denoise(image.numpy()), 10)), target_size)
 
 
 def load_image(preprocessor: partial[Tensor], file_name: str) -> Tensor:
@@ -226,7 +231,7 @@ def training_data(
 
     # `load_preprocess` is higher order requiring a partial preprocessing method.
     # the inner partial function specifies the size of the preprocessed image.
-    load_preprocess = lambda s: load_image(partial(preprocess_image, target_size), s)
+    load_preprocess = lambda s: load_image(partial(old_preprocess_image, target_size), s)
     return (
         BatchGenerator(x_train, y_train, batch_size, load_preprocess),
         BatchGenerator(x_test, y_test, batch_size, load_preprocess),
