@@ -26,7 +26,6 @@ from resnet_specification import (
 )
 from utils import *
 
-
 # [1]
 def conv_1(input_layer: Layer) -> Layer:
     layers: list[Layer] = [
@@ -118,7 +117,7 @@ def build_resnet(layers: int, output_classes: int) -> Model:
 
     resnet.compile(
         loss=SparseCategoricalCrossentropy(from_logits=True),
-        optimizer=Adam(lr=3e-4),
+        optimizer=Adam(),
         metrics=["accuracy"],
     )
 
