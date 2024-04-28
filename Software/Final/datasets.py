@@ -5,7 +5,7 @@
 #            https://portal.nersc.gov/project/dasrepo/self-supervised-learning-sdss/dataset.html
 #
 # The script assumes that you are using a UNIX based platform or windows subsystem for linux (WSL)
-# gz2_filename_mapping.csv, gz2_hart16.csv and images_gz2 must all be found in your ...\Downloads folder.
+# gz2_filename_mapping.csv, gz2_hart16.csv and images_gz2 must all be found in your .../Downloads folder.
 # NOTE: windows extract fails to extract gz2_hart16.csv correctly so use a different program like WinRAR
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -132,6 +132,7 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
     pandas_df: pd_DataFrame = df.toPandas()
     
     spark.stop()
+    del(spark)
 
     return pandas_df
 
@@ -216,12 +217,11 @@ class BatchGenerator(Sequence):
 
 
 def training_data(
-    make_df: partial[pd_DataFrame],
+    df: pd_DataFrame,
     batch_size: int = 32,
     target_size: tuple[int, int] = (224, 224),
 ) -> tuple[BatchGenerator, BatchGenerator]:
 
-    df: pd_DataFrame = make_df()
     x_train, x_test, y_train, y_test = train_test_split(
         df["value"].tolist(),
         df["classification"].tolist(),
