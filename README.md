@@ -17,7 +17,7 @@ exit
 
 Re-enter WSL:
 ```bash
-wsl --install
+wsl --install # for me it throws an error without the --install flag even if installed
 ```
 
 In WSL (install python dependancies)
