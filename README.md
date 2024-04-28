@@ -25,6 +25,7 @@ In WSL (install python dependancies)
 conda install cudatoolkit cudnn # make sure there is a gpu available
 export LD_LIBRARY_PATH=$LD_LIBRARY:$CONDA_PREFIX/lib
 pip3 -m pip install tensorflow[and-gpu] findspark pyspark pandas matplotlib seaborn
+python3 -c "import tensorflow as tf; print('\n'.join([*map(str, tf.config.list_physical_devices())]))"
 ```
 
 In WSL (install data)
@@ -50,4 +51,12 @@ unzip images_gz2.zip
 # cleanup
 rm __MACOSX/ -rf
 rm images_gz2.zip
-```ls
+cd
+```
+
+Add a decent editor (optional)
+```bash
+sudo add-apt-repository ppa:maveonair/helix-editor
+sudo apt update
+sudo apt install helix
+```
