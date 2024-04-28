@@ -30,6 +30,15 @@ pip3 -m pip install tensorflow[and-gpu] findspark pyspark pandas matplotlib seab
 In WSL (install data)
 ```bash
 sudo apt install unzip
-
-
-```
+mkdir ~/Downloads/
+cd Downloads/
+wget https://gz2hart.s3.amazonaws.com/gz2_hart16.csv.gz
+wget https://zenodo.org/records/3565489/files/gz2_filename_mapping.csv?download=1
+wget https://zenodo.org/records/3565489/files/images_gz2.zip?download=1 # this wget takes some time
+mv 'gz2_filename_mapping.csv?download=1' gz2_filename_mapping.csv
+mv 'images_gz2.zip?download=1' images_gz2.zip
+gzip -d gz2_hart16.csv.gz
+unzip images_gz2.zip
+rm __MACOSX/ -rf
+rm images_gz2.zip
+```ls
