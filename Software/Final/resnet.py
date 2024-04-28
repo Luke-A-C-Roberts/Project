@@ -116,7 +116,7 @@ def build_resnet(layers: int, output_classes: int) -> Model:
     resnet = Model(inputs=input_layer, outputs=output_layer)
 
     resnet.compile(
-        loss=SparseCategoricalCrossentropy(from_logits=True),
+        loss=SparseCategoricalCrossentropy(from_logits=False),
         optimizer=Adam(),
         metrics=["accuracy"],
     )
