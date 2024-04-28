@@ -53,6 +53,10 @@ rm __MACOSX/ -rf
 rm images_gz2.zip
 cd
 ```
+In WSL (download this repo)
+```bash
+git clone https://github.com/Luke-A-C-Roberts/Project
+```
 
 Add a decent editor (optional)
 ```bash
