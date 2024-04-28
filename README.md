@@ -22,7 +22,7 @@ wsl --install # for me it throws an error without the --install flag even if ins
 
 In WSL (install python dependancies)
 ```bash
-conda install cudatoolkit cudnn
+conda install cudatoolkit cudnn # make sure there is a gpu available
 export LD_LIBRARY_PATH=$LD_LIBRARY:$CONDA_PREFIX/lib
 pip3 -m pip install tensorflow[and-gpu] findspark pyspark pandas matplotlib seaborn
 ```
