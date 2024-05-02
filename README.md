@@ -24,7 +24,7 @@ In WSL (install python dependancies)
 ```bash
 conda install cudatoolkit cudnn # make sure there is a gpu available
 export LD_LIBRARY_PATH=$LD_LIBRARY:$CONDA_PREFIX/lib
-pip3 -m pip install tensorflow[and-gpu] findspark pyspark pandas scikit-learn matplotlib seaborn
+python3 -m pip install tensorflow[and-gpu] findspark pyspark pandas scikit-learn matplotlib seaborn
 python3 -c "import tensorflow as tf; print('\n'.join([*map(str, tf.config.list_physical_devices())]))"
 ```
 
