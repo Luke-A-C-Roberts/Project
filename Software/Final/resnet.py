@@ -16,7 +16,7 @@ from keras.optimizers import Adam
 
 from dataclasses import dataclass
 from itertools import starmap
-from typing import Callable
+from typing import Callable, KeysView
 
 from resnet_specification import (
     LayerSpec,
@@ -40,6 +40,7 @@ def conv_1(input_layer: Layer) -> Layer:
 
 def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
     use_strides: bool = multilayer_spec.use_strides
+
     for repetition in range(multilayer_spec.repetitions):
         layer_name: str = "conv{0}_{1}".format(index + 1, repetition)
         shortcut_layers: list[Layer] = [
@@ -51,10 +52,11 @@ def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
             ),
             BatchNormalization(name="{0}_shortcut_norm".format(layer_name)),
         ]
+
         shortcut: Layer = pipeline(shortcut_layers, x)
 
         for layer_num, (kernel_size, filters) in enumerate(multilayer_spec):
-            layers = [
+            layers: list[Layer] = [
                 Conv2D(
                     filters=filters,
                     kernel_size=kernel_size,
@@ -66,7 +68,7 @@ def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
             ]
             use_strides = False
 
-            x = pipeline(layers, x)
+            x: Layer = pipeline(layers, x)
 
             if layer_num == len(multilayer_spec) - 1:
                 x = Add(name="{0}_add{1}".format(layer_name, layer_num))([shortcut, x])  # type: ignore (pylance can't type `Add`)
@@ -80,8 +82,8 @@ def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
 
 
 def dense(x: Layer, index: int, output_classes: int) -> Layer:
-    layer_name = "conv{0}".format(index)
-    layers = [
+    layer_name: str = "conv{0}".format(index)
+    layers: list[Layer] = [
         BatchNormalization(name="{0}_norm".format(layer_name)),
         Activation(activation="relu", name="{0}_activation".format(layer_name)),
         GlobalAveragePooling2D(name="{0}_pool".format(layer_name)),
@@ -96,7 +98,7 @@ def dense(x: Layer, index: int, output_classes: int) -> Layer:
 
 # https://arxiv.org/abs/1512.03385
 def build_resnet(layers: int, output_classes: int) -> Model:
-    resnet_nums = RESNET_SPECIFICATIONS.keys()
+    resnet_nums: KeysView[int] = RESNET_SPECIFICATIONS.keys()
     if layers not in resnet_nums:
         raise ValueError(
             "{0} requires a layer number included in the list {1}".format(
@@ -104,14 +106,13 @@ def build_resnet(layers: int, output_classes: int) -> Model:
             )
         )
 
-    specification = RESNET_SPECIFICATIONS[layers]
-
+    specification: ResnetSpec = RESNET_SPECIFICATIONS[layers]
     input_layer = Input(shape=(224, 224, 3))
-    x = conv_1(input_layer)  # type: ignore
+
+    x: Layer = conv_1(input_layer)
     for i, multilayer_spec in enumerate(specification):
-        # ic(multilayer_spec)
         x = conv_x(x, i, multilayer_spec)
-    output_layer = dense(x, len(specification) + 1, output_classes)
+    output_layer: Layer = dense(x, len(specification) + 1, output_classes)
 
     resnet = Model(inputs=input_layer, outputs=output_layer)
 

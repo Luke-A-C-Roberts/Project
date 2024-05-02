@@ -23,18 +23,18 @@ from pyspark.sql.functions import col, udf
 from tensorflow._api.v2.io import read_file
 from tensorflow._api.v2.image import decode_jpeg, resize
 from tensorflow._api.v2.v2 import Tensor, convert_to_tensor
+from tensorflow._api.math import reduce_mean, reduce_std
 
 from keras.utils import Sequence
 
 from pandas import DataFrame as pd_DataFrame
 from numpy import array, ceil, int32 as np_int32, ndarray
-# from cv2 import fastNlMeansDenoisingColored, threshold, THRESH_TOZERO
 
 from sklearn.model_selection import train_test_split
 
 from functools import partial
 from os import listdir
-from re import match
+from re import match, Match
 from typing import Callable
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
@@ -82,7 +82,7 @@ def classification(gz2_class: str) -> int:
     pyspark udf that generates the correct class id (see `CLASSIFICATIONS`)
     """
     for stem in CLASSIFICATIONS.keys():
-        m = match(r"^" + stem, gz2_class)
+        m: Match | None = match(r"^" + stem, gz2_class)
         if m:
             return CLASSIFICATIONS[stem]
     return -1
@@ -137,48 +137,14 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
     return pandas_df
 
 
-# def denoise (src: ndarray) -> ndarray:
-#     """
-#     de-noises the image with open-cv fastNlMeansDenoisingColored
-#     """
-#     return fastNlMeansDenoisingColored(
-#         src=src,
-#         dst=None,
-#         h=10,
-#         hColor=10,
-#         templateWindowSize=7,
-#         searchWindowSize=21
-#     )
-
-
-# def zero_under_threshold(src: ndarray, thresh: int) -> ndarray:
-#     """
-#     all pixles under a certain value are set to zero to remove background noise
-#     over a certain threashold value
-#     """
-#     return threshold(
-#         src=src,
-#         thresh=thresh,
-#         maxval=0,
-#         type=THRESH_TOZERO,
-#         dst=None
-#     )[1]
-
-
-def old_preprocess_image(target_size: tuple[int, int], image: Tensor) -> Tensor:
-
-    return resize(image, target_size)
-
-
-# def preprocess_image(target_size: tuple[int, int], image: Tensor) -> Tensor:
-#     """
-#     preprocessing performed on each image tensor. `target_size` is the size to rescale to
-#     """
+def preprocess_image(image: Tensor) -> Tensor:
+    """
+    normaliss the image data into a float
+    """
+    return image / 255.
     
-#     return resize(convert_to_tensor(zero_under_threshold(denoise(image.numpy()), 10)), target_size)
 
-
-def load_image(preprocessor: partial[Tensor], file_name: str) -> Tensor:
+def load_image(file_name: str, preprocessor: Callable[[Tensor], Tensor]) -> Tensor:
     """
     loads an image by name and performs a specified `preprocessor` function afterwards
     """
@@ -192,7 +158,7 @@ class BatchGenerator(Sequence):
         image_filenames: list[str],
         labels: list[int],
         batch_size: int,
-        load_preprocess: Callable[[str], Tensor],
+        load_preprocess: partial[tensor],
     ) -> None:
         self._image_filenames: list[str] = image_filenames
         self._labels: list[int] = labels
@@ -211,7 +177,7 @@ class BatchGenerator(Sequence):
             )
         ]
         labels_batch = self._labels[batch_slice]
-        return array([*map(self._load_preprocess, filenames_batch)]) / 255.0, array(
+        return array([*map(self._load_preprocess, filenames_batch)]), array(
             labels_batch
         )
 
@@ -231,7 +197,8 @@ def training_data(
 
     # `load_preprocess` is higher order requiring a partial preprocessing method.
     # the inner partial function specifies the size of the preprocessed image.
-    load_preprocess = lambda s: load_image(partial(old_preprocess_image, target_size), s)
+    # load_preprocess: Callable[[str], Tensor] = lambda s: load_image(preprocess_image, s)
+    load_preprocess: partial[Tensor] = partial(load_image, preprocessor=preprocess_image)
     return (
         BatchGenerator(x_train, y_train, batch_size, load_preprocess),
         BatchGenerator(x_test, y_test, batch_size, load_preprocess),
