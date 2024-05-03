@@ -20,43 +20,65 @@ Re-enter WSL:
 wsl --install # for me it throws an error without the --install flag even if installed
 ```
 
-In WSL (install python dependancies)
+In WSL install python dependancies
 ```bash
 conda install cudatoolkit cudnn # make sure there is a gpu available
 export LD_LIBRARY_PATH=$LD_LIBRARY:$CONDA_PREFIX/lib
-python3 -m pip install tensorflow[and-gpu] findspark pyspark pandas scikit-learn matplotlib seaborn
+python3 -m pip install tensorflow[and-gpu] findspark pyspark pandas scikit-learn matplotlib seaborn more-itertools
 python3 -c "import tensorflow as tf; print('\n'.join([*map(str, tf.config.list_physical_devices())]))"
 ```
 
-In WSL (install data)
+In WSL install data
 ```bash
-# preparation
-sudo apt install unzip
 mkdir ~/Downloads/
 cd Downloads/
 
-# downloading files
 wget https://gz2hart.s3.amazonaws.com/gz2_hart16.csv.gz
 wget https://zenodo.org/records/3565489/files/gz2_filename_mapping.csv?download=1
-wget https://zenodo.org/records/3565489/files/images_gz2.zip?download=1 # this wget takes some time
 
-# renaming
 mv 'gz2_filename_mapping.csv?download=1' gz2_filename_mapping.csv
-mv 'images_gz2.zip?download=1' images_gz2.zip
 
-# extracting
 gzip -d gz2_hart16.csv.gz
+```
+
+In WSL install raw images
+```bash
+sudo apt install unzip
+
+wget https://zenodo.org/records/3565489/files/images_gz2.zip?download=1
 unzip images_gz2.zip
 
-# cleanup
+mv 'images_gz2.zip?download=1' images_gz2.zip
+
 rm __MACOSX/ -rf
 rm images_gz2.zip
+
 cd
 ```
-In WSL (download this repo)
+
+In WSL alternatively install preprocessed images
+```bash
+pip install gdown
+gdown --id 1KwKv5uFMuF-wHa_7JcF3oNc16CG-8tjz --output preprocessed.tgz
+
+tar zxvf preprocessed.tgz
+
+cd
+```
+
+In WSL download this repo
 ```bash
 git clone https://github.com/Luke-A-C-Roberts/Project
 ```
+
+In WSL Apply Preprocessing (optional)
+```bash
+cd Project/Software/Final/
+python3 preprocessing.py
+cd
+```
+
+
 
 Add a decent editor (optional)
 ```bash
