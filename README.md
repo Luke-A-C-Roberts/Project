@@ -56,7 +56,7 @@ rm images_gz2.zip
 cd
 ```
 
-In WSL alternatively install preprocessed images
+In WSL install preprocessed images (alternatively)
 ```bash
 pip install gdown
 gdown --id 1KwKv5uFMuF-wHa_7JcF3oNc16CG-8tjz --output preprocessed.tgz
