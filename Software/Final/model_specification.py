@@ -9,7 +9,7 @@ class LayerSpec(Iterable):
     layer many times
     """
 
-    kernel_size: int
+    kernel_size: int|None
     filters: int
 
     def __iter__(self) -> Iterator:

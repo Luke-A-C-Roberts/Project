@@ -8,6 +8,8 @@ from os import listdir, mkdir
 from typing import Callable
 from time import time
 
+from utils import compose
+
 
 DOWNLOADS_PATH      : str   = "/home/luke/Downloads/"  # "/mnt/c/Users/Computing/Downloads/"
 ZENODO_IMAGES_FOLDER: str   = DOWNLOADS_PATH + "images_gz2/images/"
@@ -17,10 +19,6 @@ THRESH_MAX          : float = 255.
 CROP_WIDTH          : int   = 244
 CROP_HEIGHT         : int   = 244
 BLUR_KERNEL_DIMS    : tuple[int, int] = (5, 5)
-
-
-def compose(*funcs: Callable) -> Callable:
-    return lambda *args, **kwargs: reduce(lambda v, f: f(v), funcs[:-1], funcs[-1](*args, **kwargs))
 
 
 # simple blur to reduce noise
@@ -58,10 +56,11 @@ def jpg_to_png(file_name: str) -> str:
 
 
 # reads and performs all preprocessing in call order
-preprocessing: Callable[[MatLike], None | MatLike] = compose(
+preprocessing: Callable[[MatLike], None | MatLike] =\
+compose(
     threshold_image,
     blur_image,
-    crop_image,
+    crop_image
 )
 
 

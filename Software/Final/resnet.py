@@ -26,8 +26,9 @@ from resnet_specification import (
 )
 from utils import *
 
+
 # [1]
-def conv_1(input_layer: Layer) -> Layer:
+def resnet_conv_0(input_layer: Layer) -> Layer:
     layers: list[Layer] = [
         ZeroPadding2D(padding=pad(3), name="conv0_pad1"),
         Conv2D(filters=64, kernel_size=7, strides=2, name="conv0_conv"),
@@ -38,22 +39,28 @@ def conv_1(input_layer: Layer) -> Layer:
     return pipeline(layers, input_layer)
 
 
-def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
+
+def resnet_conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
     use_strides: bool = multilayer_spec.use_strides
 
     for repetition in range(multilayer_spec.repetitions):
         layer_name: str = "conv{0}_{1}".format(index + 1, repetition)
-        shortcut_layers: list[Layer] = [
-            Conv2D(
-                filters=multilayer_spec.layer_specs[-1].filters,
-                kernel_size=1,
-                strides=(2 if use_strides else 1),
-                name="{0}_shortcut_conv".format(layer_name),
-            ),
-            BatchNormalization(name="{0}_shortcut_norm".format(layer_name)),
-        ]
 
-        shortcut: Layer = pipeline(shortcut_layers, x)
+        shortcut: Layer|None = None
+        
+        if repetition == 0:
+            shortcut_layers: list[Layer] = [
+                Conv2D(
+                    filters=multilayer_spec.layer_specs[-1].filters,
+                    kernel_size=1,
+                    strides=(2 if use_strides else 1),
+                    name="{0}_shortcut_conv".format(layer_name),
+                ),
+                BatchNormalization(name="{0}_shortcut_norm".format(layer_name))
+            ]
+            shortcut = pipeline(shortcut_layers, x)
+        else:
+            shortcut = x
 
         for layer_num, (kernel_size, filters) in enumerate(multilayer_spec):
             layers: list[Layer] = [
@@ -68,7 +75,7 @@ def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
             ]
             use_strides = False
 
-            x: Layer = pipeline(layers, x)
+            x = pipeline(layers, x)
 
             if layer_num == len(multilayer_spec) - 1:
                 x = Add(name="{0}_add{1}".format(layer_name, layer_num))([shortcut, x])  # type: ignore (pylance can't type `Add`)
@@ -84,8 +91,8 @@ def conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
 def dense(x: Layer, index: int, output_classes: int) -> Layer:
     layer_name: str = "conv{0}".format(index)
     layers: list[Layer] = [
-        BatchNormalization(name="{0}_norm".format(layer_name)),
-        Activation(activation="relu", name="{0}_activation".format(layer_name)),
+        # BatchNormalization(name="{0}_norm".format(layer_name)),
+        # Activation(activation="relu", name="{0}_activation".format(layer_name)),
         GlobalAveragePooling2D(name="{0}_pool".format(layer_name)),
         Dense(
             units=output_classes,
@@ -96,7 +103,7 @@ def dense(x: Layer, index: int, output_classes: int) -> Layer:
     return pipeline(layers, x)
 
 
-# https://arxiv.org/abs/1512.03385
+# [2] 
 def build_resnet(layers: int, output_classes: int) -> Model:
     resnet_nums: KeysView[int] = RESNET_SPECIFICATIONS.keys()
     if layers not in resnet_nums:
@@ -109,9 +116,9 @@ def build_resnet(layers: int, output_classes: int) -> Model:
     specification: ResnetSpec = RESNET_SPECIFICATIONS[layers]
     input_layer = Input(shape=(224, 224, 3))
 
-    x: Layer = conv_1(input_layer)
+    x: Layer = resnet_conv_0(input_layer)
     for i, multilayer_spec in enumerate(specification):
-        x = conv_x(x, i, multilayer_spec)
+        x = resnet_conv_x(x, i, multilayer_spec)
     output_layer: Layer = dense(x, len(specification) + 1, output_classes)
 
     resnet = Model(inputs=input_layer, outputs=output_layer)
@@ -124,4 +131,6 @@ def build_resnet(layers: int, output_classes: int) -> Model:
 
     return resnet
 
+
 [1] # https://github.com/keras-team/keras/blob/master/keras/applications/resnet.py
+[2] # https://arxiv.org/abs/1512.03385
