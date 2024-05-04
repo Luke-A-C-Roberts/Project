@@ -41,6 +41,8 @@ mv 'gz2_filename_mapping.csv?download=1' gz2_filename_mapping.csv
 gzip -d gz2_hart16.csv.gz
 ```
 
+You may want to download the raw images and then perform preprocessing yourself, but to save time I recommend that you download the preprocessed images and extraxt the `preprocessing.tar.gz` file.
+
 In WSL install raw images
 ```bash
 sudo apt install unzip
@@ -75,7 +77,11 @@ python3 preprocessing.py
 cd
 ```
 
-
+To run the project.
+```bash
+cd Project/Software/Final/
+python3 __main__.py -m <available model name> -p
+```
 
 Add a decent editor (optional)
 ```bash
