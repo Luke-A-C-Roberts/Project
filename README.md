@@ -61,7 +61,7 @@ In WSL install preprocessed images (alternatively)
 pip install gdown
 gdown --id 1KwKv5uFMuF-wHa_7JcF3oNc16CG-8tjz --output preprocessed.tgz
 
-tar zxvf preprocessed.tgz
+tar -zxvf preprocessed.tgz
 
 cd
 ```
