@@ -21,7 +21,7 @@ from pyspark.sql.types import StringType, IntegerType
 from pyspark.sql.functions import col, udf
 
 from tensorflow._api.v2.io import read_file
-from tensorflow._api.v2.image import decode_jpeg, resize
+from tensorflow._api.v2.image import decode_jpeg, decode_png, resize
 from tensorflow._api.v2.v2 import Tensor, convert_to_tensor
 from tensorflow._api.math import reduce_mean, reduce_std
 
@@ -39,14 +39,14 @@ from typing import Callable
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-# Might need to change these
-DOWNLOADS_PATH      : str = "/home/computing/Downloads/"  # "/mnt/c/Users/Computing/Downloads/"
-MAPPING_FILE        : str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
-DATASET_FILE        : str = DOWNLOADS_PATH + "gz2_hart16.csv"
-ZENODO_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images/"
-DATASET_COLS        : list[str] = ["dr7objid", "sample", "gz2_class"]
-DF_DROP_COLS        : list[str] = ["dr7objid", "objid"]
-FILENAME_DROP_COLS  : list[str] = ["asset_id", "id", "sample"]
+DOWNLOADS_PATH            : str = "/home/computing/Downloads/"
+MAPPING_FILE              : str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
+DATASET_FILE              : str = DOWNLOADS_PATH + "gz2_hart16.csv"
+ZENODO_IMAGES_FOLDER      : str = DOWNLOADS_PATH + "images/"
+PREPROCESSED_IMAGES_FOLDER: str = DOWNLOADS_PATH + "preprocessed/"
+DATASET_COLS              : list[str] = ["dr7objid", "sample", "gz2_class"]
+DF_DROP_COLS              : list[str] = ["dr7objid", "objid"]
+FILENAME_DROP_COLS        : list[str] = ["asset_id", "id", "sample"]
 
 CLASSIFICATIONS: dict[str, int] = {
     "Er" : 0,
@@ -76,6 +76,14 @@ def remove_jpg_extention(name: str) -> str:
     return name.removesuffix(".jpg")
 
 
+@udf(returnType=StringType())
+def jpg_to_png(name: str) -> str:
+    """
+    converts a column of images with .jpg extentions to .png extentions
+    """
+    return name.replace(".jpg", ".png")
+
+
 @udf(returnType=IntegerType())
 def classification(gz2_class: str) -> int:
     """
@@ -92,7 +100,7 @@ def classification(gz2_class: str) -> int:
 def zenodo_ids(session: SparkSession) -> DataFrame:
     """
     zenodo_id gets the object IDs from the extentions in
-    /mnt/c/Users/Computing/Downloads/images_gz2/images/ once they have been
+    /home/computing/Downloads/images_gz2/images/ once they have been
     downloaded from https://zenodo.org/records/3565489#.Y3vFKS-l0eY. Make sure
     both the images_gz2 and gz2_filename_mapping.csv are downloaded.
     """
@@ -101,7 +109,18 @@ def zenodo_ids(session: SparkSession) -> DataFrame:
     ).withColumn("id", remove_jpg_extention(col("value")))
 
 
-def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
+def preprocessed_ids(session: SparkSession) -> DataFrame:
+    """
+    preprocessed image are found in /home/computing/Downloads/images_gz2/images/
+    and are loaded with this function. See README.md for command to download the
+    preprocessed image set.
+    """
+    return session.createDataFrame(
+        listdir(PREPROCESSED_IMAGES_FOLDER), schema=StringType()
+    ).withColumn("id", remove_jpg_extention(col("value")))
+
+
+def training_df(obj_func: Callable[[], DataFrame], png: bool) -> pd_DataFrame:
     """
     training df, takes an fuction that gives a dataframe of IDs and produces a
     list of existing image files names and classification numbers.
@@ -128,6 +147,8 @@ def training_df(obj_func: Callable[[], DataFrame]) -> pd_DataFrame:
         .filter(col("classification") != -1)
         .sort(df["value"])
     )
+
+    if png: df = df.withColumn("value", jpg_to_png(col("value")))
     
     pandas_df: pd_DataFrame = df.toPandas()
     
@@ -144,11 +165,19 @@ def preprocess_image(image: Tensor) -> Tensor:
     return image / 255.
     
 
-def load_image(file_name: str, preprocessor: Callable[[Tensor], Tensor]) -> Tensor:
+def load_raw_jpg(file_name: str, preprocessor: Callable[[Tensor], Tensor]) -> Tensor:
     """
     loads an image by name and performs a specified `preprocessor` function afterwards
     """
     return preprocessor(decode_jpeg(read_file(ZENODO_IMAGES_FOLDER + file_name)))
+
+
+def load_preprocessed_png(file_name: str, preprocessor: Callable[[Tensor], Tensor]) -> Tensor:
+    """
+    loads a preprocessed image by name and performs a specified `preprocessor`
+    function afterwards
+    """
+    return preprocessor(decode_png(read_file(PREPROCESSED_IMAGES_FOLDER + file_name)))
 
 
 # [3]
@@ -184,6 +213,7 @@ class BatchGenerator(Sequence):
 
 def training_data(
     df: pd_DataFrame,
+    preprocessed: bool,
     batch_size: int = 32,
     target_size: tuple[int, int] = (224, 224),
 ) -> tuple[BatchGenerator, BatchGenerator]:
@@ -198,7 +228,11 @@ def training_data(
     # `load_preprocess` is higher order requiring a partial preprocessing method.
     # the inner partial function specifies the size of the preprocessed image.
     # load_preprocess: Callable[[str], Tensor] = lambda s: load_image(preprocess_image, s)
-    load_preprocess: partial[Tensor] = partial(load_image, preprocessor=preprocess_image)
+    load_preprocess: partial[Tensor] = (
+        partial(load_preprocessed_png, preprocessor=preprocess_image)
+        if preprocessed else
+        partial(load_raw_jpg, preprocessor=preprocess_image)
+    )
     return (
         BatchGenerator(x_train, y_train, batch_size, load_preprocess),
         BatchGenerator(x_test, y_test, batch_size, load_preprocess),

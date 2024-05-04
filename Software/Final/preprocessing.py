@@ -11,7 +11,7 @@ from time import time
 from utils import compose
 
 
-DOWNLOADS_PATH      : str   = "/home/luke/Downloads/"  # "/mnt/c/Users/Computing/Downloads/"
+DOWNLOADS_PATH      : str   = "/home/computing/Downloads/"
 ZENODO_IMAGES_FOLDER: str   = DOWNLOADS_PATH + "images_gz2/images/"
 EDITED_IMAGES_FOLDER: str   = DOWNLOADS_PATH + "images_gz2/preprocessed/"
 THRESH_MIN          : float = 10.
