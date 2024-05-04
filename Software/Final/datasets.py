@@ -23,7 +23,6 @@ from pyspark.sql.functions import col, udf
 from tensorflow._api.v2.io import read_file
 from tensorflow._api.v2.image import decode_jpeg, decode_png, resize
 from tensorflow._api.v2.v2 import Tensor, convert_to_tensor
-from tensorflow._api.math import reduce_mean, reduce_std
 
 from keras.utils import Sequence
 
@@ -77,7 +76,23 @@ def remove_jpg_extention(name: str) -> str:
 
 
 @udf(returnType=StringType())
+def remove_png_extention(name: str) -> str:
+    """
+    pyspark udf function for removing the .jpg extention from image files
+    """
+    return name.removesuffix(".png")
+
+
+@udf(returnType=StringType())
 def jpg_to_png(name: str) -> str:
+    """
+    converts a column of images with .jpg extentions to .png extentions
+    """
+    return name.replace(".jpg", ".png")
+
+
+@udf(returnType=StringType())
+def png_to_jpg(name: str) -> str:
     """
     converts a column of images with .jpg extentions to .png extentions
     """
@@ -117,7 +132,7 @@ def preprocessed_ids(session: SparkSession) -> DataFrame:
     """
     return session.createDataFrame(
         listdir(PREPROCESSED_IMAGES_FOLDER), schema=StringType()
-    ).withColumn("id", remove_jpg_extention(col("value")))
+    ).withColumn("id", remove_png_extention(col("value")))
 
 
 def training_df(obj_func: Callable[[], DataFrame], png: bool) -> pd_DataFrame:
@@ -162,7 +177,7 @@ def preprocess_image(image: Tensor) -> Tensor:
     """
     normaliss the image data into a float
     """
-    return image / 255.
+    return image
     
 
 def load_raw_jpg(file_name: str, preprocessor: Callable[[Tensor], Tensor]) -> Tensor:
@@ -187,7 +202,7 @@ class BatchGenerator(Sequence):
         image_filenames: list[str],
         labels: list[int],
         batch_size: int,
-        load_preprocess: partial[tensor],
+        load_preprocess: partial[Tensor],
     ) -> None:
         self._image_filenames: list[str] = image_filenames
         self._labels: list[int] = labels
@@ -206,7 +221,7 @@ class BatchGenerator(Sequence):
             )
         ]
         labels_batch = self._labels[batch_slice]
-        return array([*map(self._load_preprocess, filenames_batch)]), array(
+        return array([*map(self._load_preprocess, filenames_batch)]) / 255., array(
             labels_batch
         )
 
@@ -217,7 +232,7 @@ def training_data(
     batch_size: int = 32,
     target_size: tuple[int, int] = (224, 224),
 ) -> tuple[BatchGenerator, BatchGenerator]:
-
+    
     x_train, x_test, y_train, y_test = train_test_split(
         df["value"].tolist(),
         df["classification"].tolist(),
