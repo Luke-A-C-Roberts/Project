@@ -56,9 +56,9 @@ cd
 In WSL install preprocessed images (alternatively)
 ```bash
 pip install gdown
-gdown --id 1KwKv5uFMuF-wHa_7JcF3oNc16CG-8tjz --output preprocessed.tgz
+gdown --id 1O_WV2NnZDsAhmF2nGYJDGoEHD5iw1w7x --output preprocessed.tar.gz
 
-tar -zxvf preprocessed.tgz
+tar -zxvf preprocessed.tar.gz
 
 cd
 ```
