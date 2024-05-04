@@ -50,9 +50,6 @@ unzip images_gz2.zip
 
 mv 'images_gz2.zip?download=1' images_gz2.zip
 
-rm __MACOSX/ -rf
-rm images_gz2.zip
-
 cd
 ```
 
