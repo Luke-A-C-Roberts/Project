@@ -16,8 +16,8 @@ ZENODO_IMAGES_FOLDER: str   = DOWNLOADS_PATH + "images_gz2/images/"
 EDITED_IMAGES_FOLDER: str   = DOWNLOADS_PATH + "images_gz2/preprocessed/"
 THRESH_MIN          : float = 10.
 THRESH_MAX          : float = 255.
-CROP_WIDTH          : int   = 244
-CROP_HEIGHT         : int   = 244
+CROP_WIDTH          : int   = 224
+CROP_HEIGHT         : int   = 224
 BLUR_KERNEL_DIMS    : tuple[int, int] = (5, 5)
 
 
