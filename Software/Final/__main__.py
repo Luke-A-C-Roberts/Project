@@ -72,6 +72,8 @@ def run_model(df: DataFrame, name: str, build: Callable, batch_size: int, prepro
             epochs=EPOCHS,
         )
 
+        model.save(f"/home/computing/Project/Software/Final/{name}_model.keras")
+
         del(model)
         
         DataFrame(history.history).to_csv(
@@ -93,7 +95,7 @@ def handle_args() -> Options:
     preprocessed: bool = False
     model: str = ""
 
-    m: bool = True
+    m: bool = False
     for arg in argv[1:]:
         if m:
             model = arg
@@ -114,11 +116,12 @@ def main() -> None:
     options: Options = handle_args()
     params: TrainingParams = MODELS[options.model]
     if options.preprocessed:
-        process_model(df, options.model, params.function, params.batch_size, True)
         df: DataFrame = training_df(preprocessed_ids, True)
+        print(df)
+        process_model(df, options.model, params.function, params.batch_size, True)
     else:
-        process_model(df, options.model, params.function, params.batch_size, False)
         df: DataFrame = training_df(zenodo_ids, False)
+        process_model(df, options.model, params.function, params.batch_size, False)
              
 
 if __name__ == "__main__":
