@@ -23,11 +23,14 @@ from pyspark.sql.functions import col, udf
 from tensorflow._api.v2.io import read_file
 from tensorflow._api.v2.image import decode_jpeg, decode_png, resize
 from tensorflow._api.v2.v2 import Tensor, convert_to_tensor
+from tensorflow._api.v2.dtypes import float32 as tf_float32
 
 from keras.utils import Sequence
 
 from pandas import DataFrame as pd_DataFrame
-from numpy import array, ceil, int32 as np_int32, ndarray
+from numpy import array, ceil, flipud, int32 as np_int32, ndarray, rot90
+from numpy.typing import NDArray
+from numpy.random import randint
 
 from sklearn.model_selection import train_test_split
 
@@ -38,11 +41,11 @@ from typing import Callable
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-DOWNLOADS_PATH            : str = "/home/computing/Downloads/"
+DOWNLOADS_PATH            : str = "/home/luke/Downloads/"
 MAPPING_FILE              : str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
 DATASET_FILE              : str = DOWNLOADS_PATH + "gz2_hart16.csv"
-ZENODO_IMAGES_FOLDER      : str = DOWNLOADS_PATH + "images/"
-PREPROCESSED_IMAGES_FOLDER: str = DOWNLOADS_PATH + "preprocessed/"
+ZENODO_IMAGES_FOLDER      : str = DOWNLOADS_PATH + "images_gz2/images/"
+PREPROCESSED_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images_gz2/preprocessed/"
 DATASET_COLS              : list[str] = ["dr7objid", "sample", "gz2_class"]
 DF_DROP_COLS              : list[str] = ["dr7objid", "objid"]
 FILENAME_DROP_COLS        : list[str] = ["asset_id", "id", "sample"]
@@ -68,17 +71,17 @@ CLASSIFICATIONS: dict[str, int] = {
 
 # [1]
 @udf(returnType=StringType())
-def remove_jpg_extention(name: str) -> str:
+def remove_jpg_extension(name: str) -> str:
     """
-    pyspark udf function for removing the .jpg extention from image files
+    pyspark udf function for removing the .jpg extension from image files
     """
     return name.removesuffix(".jpg")
 
 
 @udf(returnType=StringType())
-def remove_png_extention(name: str) -> str:
+def remove_png_extension(name: str) -> str:
     """
-    pyspark udf function for removing the .jpg extention from image files
+    pyspark udf function for removing the .jpg extension from image files
     """
     return name.removesuffix(".png")
 
@@ -86,15 +89,7 @@ def remove_png_extention(name: str) -> str:
 @udf(returnType=StringType())
 def jpg_to_png(name: str) -> str:
     """
-    converts a column of images with .jpg extentions to .png extentions
-    """
-    return name.replace(".jpg", ".png")
-
-
-@udf(returnType=StringType())
-def png_to_jpg(name: str) -> str:
-    """
-    converts a column of images with .jpg extentions to .png extentions
+    converts a column of images with .jpg extensions to .png extensions
     """
     return name.replace(".jpg", ".png")
 
@@ -114,14 +109,14 @@ def classification(gz2_class: str) -> int:
 # [2]
 def zenodo_ids(session: SparkSession) -> DataFrame:
     """
-    zenodo_id gets the object IDs from the extentions in
+    zenodo_id gets the object IDs from the extensions in
     /home/computing/Downloads/images_gz2/images/ once they have been
     downloaded from https://zenodo.org/records/3565489#.Y3vFKS-l0eY. Make sure
     both the images_gz2 and gz2_filename_mapping.csv are downloaded.
     """
     return session.createDataFrame(
         listdir(ZENODO_IMAGES_FOLDER), schema=StringType()
-    ).withColumn("id", remove_jpg_extention(col("value")))
+    ).withColumn("id", remove_jpg_extension(col("value")))
 
 
 def preprocessed_ids(session: SparkSession) -> DataFrame:
@@ -132,12 +127,12 @@ def preprocessed_ids(session: SparkSession) -> DataFrame:
     """
     return session.createDataFrame(
         listdir(PREPROCESSED_IMAGES_FOLDER), schema=StringType()
-    ).withColumn("id", remove_png_extention(col("value")))
+    ).withColumn("id", remove_png_extension(col("value")))
 
 
 def training_df(obj_func: Callable[[], DataFrame], png: bool) -> pd_DataFrame:
     """
-    training df, takes an fuction that gives a dataframe of IDs and produces a
+    training df, takes a function that gives a dataframe of IDs and produces a
     list of existing image files names and classification numbers.
     """  
     spark = SparkSession.builder.getOrCreate()
@@ -175,9 +170,14 @@ def training_df(obj_func: Callable[[], DataFrame], png: bool) -> pd_DataFrame:
 
 def preprocess_image(image: Tensor) -> Tensor:
     """
-    normaliss the image data into a float
+    applies random flip and rotation on image
     """
-    return image
+    arr: NDArray = array(image)
+    r: int = randint(0, 8)
+    (rot, flip) = divmod(r, 2)
+    if flip: arr = flipud(arr)
+    arr = rot90(arr, rot)
+    return convert_to_tensor(arr, dtype=tf_float32)
     
 
 def load_raw_jpg(file_name: str, preprocessor: Callable[[Tensor], Tensor]) -> Tensor:
