@@ -47,7 +47,6 @@ def alexnet_dense_layers(units: int, name: str) -> list[Layer]:
 def build_alexnet(outputs: int) -> Sequential:
     alexnet = Sequential([
         Input(shape=(224, 224, 3), name="input"),
-        Resizing(height=224, width=224, interpolation="bilinear", name="resizing"),
         *alexnet_pooling_layers(filters=96, kernel_size=11, name="pooling1"),
         *alexnet_pooling_layers(filters=256, kernel_size=5, name="pooling2"),
         *alexnet_conv_layers(filters=384, kernel_size=3, name="conv1"),
