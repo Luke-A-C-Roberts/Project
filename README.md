@@ -89,7 +89,7 @@ tar -zxvf preprocessed.tar.gz
 cd
 ```
 
-In WSL install download images of kaggle reduced set (alternatively)
+In WSL install download preprocessed kaggle reduced set (alternatively)
 ```bash
 pip install gdown
 gdown --id 1d5UZHFVNtJ1eOZWOqrnfsS7woLrIfZ_G --output preprocessed.tar.gz
