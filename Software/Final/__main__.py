@@ -126,3 +126,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+[1] # https://www.linkedin.com/pulse/solving-out-memory-oom-errors-keras-tensorflow-running-wayne-cheng
+[2] # https://medium.com/@mrgarg.rajat/training-on-large-datasets-that-dont-fit-in-memory-in-keras-60a974785d7
+[3] # https://stackoverflow.com/questions/51005147/keras-release-memory-after-finish-training-process

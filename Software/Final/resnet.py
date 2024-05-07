@@ -29,6 +29,11 @@ from utils import *
 
 # [1]
 def resnet_conv_0(input_layer: Layer) -> Layer:
+    """
+    creates the first layer of resnet including padding, convolution, normalisation and
+    pooling.
+    """
+    
     layers: list[Layer] = [
         ZeroPadding2D(padding=pad(3), name="conv0_pad1"),
         Conv2D(filters=64, kernel_size=7, strides=2, name="conv0_conv"),
@@ -41,6 +46,9 @@ def resnet_conv_0(input_layer: Layer) -> Layer:
 
 
 def resnet_conv_x(x: Layer, index: int, multilayer_spec: MultiLayerSpec) -> Layer:
+    """
+    creates a block of resnet using a multilayer specification object
+    """
     use_strides: bool = multilayer_spec.use_strides
 
     for repetition in range(multilayer_spec.repetitions):
