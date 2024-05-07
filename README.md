@@ -72,7 +72,14 @@ find images_E_S_SB_images_227x227_a_03 -mindepth 3 -type f -exec mv . -i '{}' +
 rm images_E_SB_* -rf
 ```
 
-In WSL install preprocessed images (alternatively)
+In WSL Apply Preprocessing (optional). Add -k to preprocess the kaggle set instead
+```bash
+cd Project/Software/Final/
+python3 preprocessing.py
+cd
+```
+
+In WSL download preprocessed images (alternatively)
 ```bash
 pip install gdown
 gdown --id 1O_WV2NnZDsAhmF2nGYJDGoEHD5iw1w7x --output preprocessed.tar.gz
@@ -82,16 +89,19 @@ tar -zxvf preprocessed.tar.gz
 cd
 ```
 
+In WSL install download images of kaggle reduced set (alternatively)
+```bash
+pip install gdown
+gdown --id 1d5UZHFVNtJ1eOZWOqrnfsS7woLrIfZ_G --output preprocessed.tar.gz
+
+tar -zxvf preprocessed.tar.gz
+
+cd
+```
+
 In WSL download this repo
 ```bash
 git clone https://github.com/Luke-A-C-Roberts/Project
-```
-
-In WSL Apply Preprocessing (optional)
-```bash
-cd Project/Software/Final/
-python3 preprocessing.py
-cd
 ```
 
 To run the project.
