@@ -40,7 +40,6 @@ mv 'gz2_filename_mapping.csv?download=1' gz2_filename_mapping.csv
 
 gzip -d gz2_hart16.csv.gz
 ```
-
 You may want to download the raw images and then perform preprocessing yourself, but to save time I recommend that you download the preprocessed images and extraxt the `preprocessing.tar.gz` file.
 
 In WSL install raw images
@@ -53,6 +52,24 @@ unzip images_gz2.zip
 mv 'images_gz2.zip?download=1' images_gz2.zip
 
 cd
+```
+
+Or alternatively you could download a reduced set from kaggle and perform file restructuring.
+```bash
+sudo apt install unzip
+
+# Download and move to Downloads https://www.kaggle.com/datasets/robertmifsud/resized-reduced-gz2-images
+
+mkdir images_gz2
+mv archive.zip 
+cd images_gz2
+unzip archive.zip
+rm archive.zip
+
+# flatten dir
+find images_E_S_SB_images_227x227_a_03 -mindepth 3 -type f -exec mv . -i '{}' +
+
+rm images_E_SB_* -rf
 ```
 
 In WSL install preprocessed images (alternatively)
