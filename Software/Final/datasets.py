@@ -41,11 +41,11 @@ from typing import Callable
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-DOWNLOADS_PATH            : str = "/home/luke/Downloads/"
+DOWNLOADS_PATH            : str = "/home/computing/Downloads/"
 MAPPING_FILE              : str = DOWNLOADS_PATH + "gz2_filename_mapping.csv"
 DATASET_FILE              : str = DOWNLOADS_PATH + "gz2_hart16.csv"
-ZENODO_IMAGES_FOLDER      : str = DOWNLOADS_PATH + "images_gz2/images/"
-PREPROCESSED_IMAGES_FOLDER: str = DOWNLOADS_PATH + "images_gz2/preprocessed/"
+ZENODO_IMAGES_FOLDER      : str = DOWNLOADS_PATH + "images/"
+PREPROCESSED_IMAGES_FOLDER: str = DOWNLOADS_PATH + "preprocessed/"
 DATASET_COLS              : list[str] = ["dr7objid", "sample", "gz2_class"]
 DF_DROP_COLS              : list[str] = ["dr7objid", "objid"]
 FILENAME_DROP_COLS        : list[str] = ["asset_id", "id", "sample"]
